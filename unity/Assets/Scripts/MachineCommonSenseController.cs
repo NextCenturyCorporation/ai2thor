@@ -192,7 +192,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
 
         if (CheckIfRotationObjectIsObstructed(target)) {
             if(action.mcsRotationInput != Vector3.zero) {
-                // TODO: MCS-88: Perform rotation
+                // TODO: MCS-88: test clipping/physics more thoroughly
+                target.GetComponent<Rigidbody>().rotation *= Quaternion.Euler(action.mcsRotationInput);
             }
             actionFinished(true);
         } else {
