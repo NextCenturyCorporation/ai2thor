@@ -23,6 +23,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         public float pushPullForce = 150.0f;
         public float FlyMagnitude = 1.0f;
         public float WalkMagnitude = 0.2f;
+        public Vector3 rotateObjectDirection;
 
         [SerializeField] private GameObject InputMode_Text = null;
         // Start is called before the first frame update
@@ -317,7 +318,15 @@ namespace UnityStandardAssets.Characters.FirstPerson
                             action.action = "RotateLook";
                             PhysicsController.ProcessControlCommand(action);
                         }
-                    }
+
+                        if (Input.GetKeyDown(KeyCode.H)) {
+                            action.objectId = this.moveOrPickupObjectId;
+                            action.mcsRotationInput = rotateObjectDirection;
+
+                            action.action = "RotateObject";
+                            PhysicsController.ProcessControlCommand(action);
+                        }
+                }
             }
         }
     }

@@ -126,6 +126,86 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
         return objectMetadata;
     }
 
+    public bool CheckIfRotationObjectIsObstructed(SimObjPhysics target) {
+        StructureObject[] structureObjs = FindObjectsOfType(typeof(StructureObject)) as StructureObject[];
+        List<GameObject> ignoreCollisions = new List<GameObject>();
+
+        foreach (StructureObject so in structureObjs) {
+            if (so.WhatIsMyStructureObjectTag == StructureObjectTag.Floor) {
+                ignoreCollisions.Add(so.gameObject);
+            }
+        }
+
+        if (target.IsReceptacle) {
+            foreach (SimObjPhysics item in target.ReceptacleObjects) {
+                ignoreCollisions.Add(item.gameObject);
+            }
+        }
+
+        RaycastHit hitInfo;
+
+        bool objectIsOnTopOfSomething = Physics.Raycast(target.transform.position, Vector3.down, out hitInfo);
+
+        // TODO: MCS-88: Check this with receptacles and playmat?
+        if (objectIsOnTopOfSomething && hitInfo.rigidbody != null) {
+            ignoreCollisions.Add(hitInfo.rigidbody.gameObject);
+        }
+
+        if (UtilityFunctions.isObjectColliding(target.gameObject, ignoreCollisions)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool CheckIfObjectIsInteractable(SimObjPhysics target) {
+        return true;
+    }
+
+    // Alternative to RotateHand(action) since objects being held are currenty invisible.
+    public void RotateObject(ServerAction action) {
+        if (!physicsSceneManager.UniqueIdToSimObjPhysics.ContainsKey(action.objectId)) {
+            errorMessage = "Object ID appears to be invalid.";
+            Debug.Log(errorMessage);
+            actionFinished(false);
+            this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.NOT_OBJECT);
+            return;
+        }
+
+        SimObjPhysics target = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
+
+        if (!objectIsCurrentlyVisible(target, maxVisibleDistance)) {
+            errorMessage = action.objectId + " is not visible.";
+            actionFinished(false);
+            // TODO: MCS-88: Add out of reach to API return values for RotateObject
+            this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.OUT_OF_REACH);
+            return;
+        }
+
+        if ((!target.IsMoveable) && (!target.IsPickupable)) {
+            errorMessage = "Object is not interactable.";
+            Debug.Log(errorMessage);
+            actionFinished(false);
+            this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.NOT_INTERACTABLE);
+            return;
+        }
+
+        if (CheckIfRotationObjectIsObstructed(target)) {
+            if(action.mcsRotationInput != Vector3.zero) {
+                // TODO: MCS-88: Perform rotation
+            }
+            actionFinished(true);
+        } else {
+            errorMessage = "Something is blocking the object from rotating freely";
+            Debug.Log(errorMessage);
+            actionFinished(false);
+            // TODO: MCS-88: Add obstructed error to RotateObject return values in API
+            this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.OBSTRUCTED);
+            return;
+        }
+    }
+
+
     public override MetadataWrapper generateMetadataWrapper() {
         MetadataWrapper metadata = base.generateMetadataWrapper();
         metadata.lastActionStatus = this.lastActionStatus;

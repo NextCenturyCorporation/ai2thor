@@ -1055,6 +1055,7 @@ public class ServerAction
     public Vector3 objectDirection;
     public Vector3 receptacleObjectDirection;
     public MachineCommonSenseConfigScene sceneConfig;
+    public Vector3 mcsRotationInput; // used for RotateObject/RotateObjectInHand
 
     public SimObjType ReceptableSimObjType()
 	{
