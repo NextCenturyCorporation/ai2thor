@@ -7,6 +7,12 @@ using UnityStandardAssets.Characters.FirstPerson;
 using System.Text;
 
 public class MachineCommonSenseMain : MonoBehaviour {
+    private static float LIGHT_RANGE = 20f;
+    private static float LIGHT_RANGE_SCREENSHOT = 10f;
+    private static float LIGHT_Y_POSITION = 2.95f;
+    private static float LIGHT_Y_POSITION_SCREENSHOT = 0.5f;
+    private static float LIGHT_Z_POSITION = 0;
+    private static float LIGHT_Z_POSITION_SCREENSHOT = -2.0f;
     private static float WALL_X_POSITION_OBSERVATION = 7.0f;
     private static float WALL_X_POSITION_INTERACTION = 5.5f;
     private static float WALL_Y_POSITION = 1.5f;
@@ -26,7 +32,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
     private int lastStep = -1;
     private Dictionary<String, MachineCommonSenseConfigObjectDefinition> objectDictionary =
         new Dictionary<string, MachineCommonSenseConfigObjectDefinition>();
-    private List<String> materialRegistry;
+    private Dictionary<string, List<string>> materialRegistry;
 
     // AI2-THOR Objects and Scripts
     private MachineCommonSenseController agentController;
@@ -36,6 +42,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
     // Room objects
     private GameObject ceiling;
     private GameObject floor;
+    private GameObject light;
     private GameObject wallLeft;
     private GameObject wallRight;
     private GameObject wallFront;
@@ -48,6 +55,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
         this.physicsSceneManager = GameObject.Find("PhysicsSceneManager").GetComponent<PhysicsSceneManager>();
         this.ceiling = GameObject.Find("Ceiling");
         this.floor = GameObject.Find("Floor");
+        this.light = GameObject.Find("Point light");
         this.wallLeft = GameObject.Find("Wall Left");
         this.wallRight = GameObject.Find("Wall Right");
         this.wallFront = GameObject.Find("Wall Front");
@@ -69,7 +77,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
         });
 
         // Save the materials (strings) that are accepted in the scene configuration files.
-        this.materialRegistry = LoadMaterialRegistryFromFile(this.materialRegistryFile).materials;
+        this.materialRegistry = LoadMaterialRegistryFromFile(this.materialRegistryFile);
 
         // Load the default MCS scene set in the Unity Editor.
         if (!this.defaultSceneFile.Equals("")) {
@@ -85,7 +93,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
         // If the player made a step, update the scene based on the current configuration.
         if (this.lastStep < this.agentController.step) {
             this.lastStep++;
-            LogVerbose("Run Step " + this.lastStep + " at Frame " + Time.frameCount);
+            Debug.Log("MCS: Run Step " + this.lastStep + " at Frame " + Time.frameCount);
             if (this.currentScene != null && this.currentScene.objects != null) {
                 bool objectsWereShown = false;
                 List<MachineCommonSenseConfigGameObject> objects = this.currentScene.objects.Where(objectConfig =>
@@ -118,7 +126,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
 
     public void ChangeCurrentScene(MachineCommonSenseConfigScene scene) {
         if (scene == null && this.currentScene == null) {
-            Debug.LogError("MCS:  Cannot switch the MCS scene to null... Keeping the current MCS scene.");
+            Debug.LogError("MCS: Cannot switch the MCS scene to null... Keeping the current MCS scene.");
             return;
         }
 
@@ -131,9 +139,9 @@ public class MachineCommonSenseMain : MonoBehaviour {
 
         if (scene != null) {
             this.currentScene = scene;
-            Debug.Log("MCS:  Switching the current MCS scene to " + scene.name);
+            Debug.Log("MCS: Switching the current MCS scene to " + scene.name);
         } else {
-            Debug.Log("MCS:  Resetting the current MCS scene...");
+            Debug.Log("MCS: Resetting the current MCS scene...");
         }
 
         if (this.currentScene != null && this.currentScene.objects != null) {
@@ -177,6 +185,9 @@ public class MachineCommonSenseMain : MonoBehaviour {
             this.wallRight.GetComponent<Renderer>().material = new Material(Shader.Find("Unlit/Color"));
             this.wallFront.GetComponent<Renderer>().material = new Material(Shader.Find("Unlit/Color"));
             this.wallBack.GetComponent<Renderer>().material = new Material(Shader.Find("Unlit/Color"));
+            this.light.GetComponent<Light>().range = MachineCommonSenseMain.LIGHT_RANGE_SCREENSHOT;
+            this.light.transform.position = new Vector3(0, MachineCommonSenseMain.LIGHT_Y_POSITION_SCREENSHOT,
+                MachineCommonSenseMain.LIGHT_Z_POSITION_SCREENSHOT);
         }
         else {
             AssignMaterial(this.floor, floorMaterial);
@@ -184,6 +195,13 @@ public class MachineCommonSenseMain : MonoBehaviour {
             AssignMaterial(this.wallRight, wallsMaterial);
             AssignMaterial(this.wallFront, wallsMaterial);
             AssignMaterial(this.wallBack, wallsMaterial);
+            this.light.GetComponent<Light>().range = MachineCommonSenseMain.LIGHT_RANGE;
+            this.light.transform.position = new Vector3(0, MachineCommonSenseMain.LIGHT_Y_POSITION,
+                MachineCommonSenseMain.LIGHT_Z_POSITION);
+        }
+
+        if (this.currentScene.goal != null && this.currentScene.goal.description != null) {
+            Debug.Log("MCS: Goal = " + this.currentScene.goal.description);
         }
 
         GameObject controller = GameObject.Find("FPSController");
@@ -276,7 +294,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
                 if (collider is MeshCollider) {
                     if (!((MeshCollider)collider).convex) {
                         // TODO Do we need to do more?
-                        Debug.LogWarning("Deactivating concave MeshCollider in GameObject " + gameObject.name);
+                        Debug.LogWarning("MCS: Deactivating concave MeshCollider in GameObject " + gameObject.name);
                         collider.enabled = false;
                     }
                 }
@@ -307,16 +325,35 @@ public class MachineCommonSenseMain : MonoBehaviour {
                 return collider;
             }).ToArray();
         }
+        else {
+            // Else, add the AI2-THOR layer and tag to the existing colliders so they work with the AI2-THOR scripts.
+            colliders.ToList().ForEach((collider) => {
+                collider.gameObject.layer = 8; // AI2-THOR Layer SimObjVisible
+                collider.gameObject.tag = "SimObjPhysics"; // AI2-THOR Tag
+            });
+        }
 
         return colliders;
     }
 
-    private Material LoadMaterial(string filename) {
-        if (this.materialRegistry.Contains(filename)) {
-            Material material = Resources.Load<Material>("MCS/" + filename);
-            LogVerbose("LOAD OF MATERIAL FILE Assets/Resources/MCS/" + filename +
-                (material == null ? " IS NULL" : " IS DONE"));
-            return material;
+    private Material LoadMaterial(string filename, string[] restrictions) {
+        if (restrictions.Length == 1 && restrictions[0].Equals("no_material")) {
+            LogVerbose("ALL CUSTOM MATERIALS ARE RESTRICTED ON THIS OBJECT");
+            return null;
+        }
+
+        foreach (KeyValuePair<string, List<string>> materialType in this.materialRegistry) {
+            if (materialType.Value.Contains(filename)) {
+                if (restrictions.Length == 0 || Array.IndexOf(restrictions, materialType.Key) >= 0) {
+                    Material material = Resources.Load<Material>("MCS/" + filename);
+                    LogVerbose("LOAD OF MATERIAL FILE Assets/Resources/MCS/" + filename +
+                        (material == null ? " IS NULL" : " IS DONE"));
+                    return material;
+                }
+
+                LogVerbose("MATERIAL " + filename + " TYPE " + materialType.Key + " IS RESTRICTED");
+                return null;
+            }
         }
 
         LogVerbose("MATERIAL " + filename + " NOT IN MATERIAL REGISTRY");
@@ -324,10 +361,15 @@ public class MachineCommonSenseMain : MonoBehaviour {
     }
 
     private void AssignMaterial(GameObject gameObject, string configMaterialFile) {
-        this.AssignMaterials(gameObject, new string[] { configMaterialFile }, new string[] { });
+        this.AssignMaterials(gameObject, new string[] { configMaterialFile }, new string[] { }, new string[] { });
     }
 
-    private void AssignMaterials(GameObject gameObject, string[] configMaterialFiles, string[] objectMaterialNames) {
+    private void AssignMaterials(
+        GameObject gameObject,
+        string[] configMaterialFiles,
+        string[] objectMaterialNames,
+        string[] objectMaterialRestrictions
+    ) {
         if (configMaterialFiles.Length == 0) {
             return;
         }
@@ -336,7 +378,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
         Dictionary<string, Material> assignments = new Dictionary<string, Material>();
         for (int i = 0; i < objectMaterialNames.Length; ++i) {
             if (configMaterialFiles.Length > i && !configMaterialFiles[i].Equals("")) {
-                Material material = this.LoadMaterial(configMaterialFiles[i]);
+                Material material = this.LoadMaterial(configMaterialFiles[i], objectMaterialRestrictions);
                 if (material != null) {
                     assignments.Add(objectMaterialNames[i], material);
                     LogVerbose("OBJECT " + gameObject.name.ToUpper() + " SWAP MATERIAL " + objectMaterialNames[i] +
@@ -346,7 +388,8 @@ public class MachineCommonSenseMain : MonoBehaviour {
         }
 
         // If not given objectMaterialNames, just change all object materials to the first configMaterialFile.
-        Material singleConfigMaterial = assignments.Count > 0 ? null : this.LoadMaterial(configMaterialFiles[0]);
+        Material singleConfigMaterial = assignments.Count > 0 ? null : this.LoadMaterial(configMaterialFiles[0],
+            objectMaterialRestrictions);
 
         if (assignments.Count == 0 && singleConfigMaterial == null) {
             return;
@@ -419,7 +462,8 @@ public class MachineCommonSenseMain : MonoBehaviour {
 
         // The object's visibility points define a subset of points along the outside of the object for AI2-THOR.
         if (objectDefinition.visibilityPoints.Count > 0) {
-            visibilityPoints = this.AssignVisibilityPoints(gameObject, objectDefinition.visibilityPoints);
+            visibilityPoints = this.AssignVisibilityPoints(gameObject, objectDefinition.visibilityPoints,
+                objectDefinition.visibilityPointsScaleOne);
         }
 
         if (shouldAddSimObjPhysicsScript) {
@@ -439,7 +483,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
             materialFiles = new string[] { objectConfig.materialFile };
         }
         this.AssignMaterials(gameObject, materialFiles, objectDefinition.materials != null ?
-            objectDefinition.materials.ToArray() : new string[] { });
+            objectDefinition.materials.ToArray() : new string[] { }, objectDefinition.materialRestrictions.ToArray());
 
         this.ModifyChildrenInteractables(gameObject, objectDefinition.interactables);
 
@@ -550,13 +594,8 @@ public class MachineCommonSenseMain : MonoBehaviour {
         if (ai2thorPhysicsScript == null) {
             ai2thorPhysicsScript = gameObject.AddComponent<SimObjPhysics>();
             ai2thorPhysicsScript.isInteractable = true;
-            ai2thorPhysicsScript.PrimaryProperty = (pickupable ? SimObjPrimaryProperty.CanPickup : (moveable ?
-                SimObjPrimaryProperty.Moveable : SimObjPrimaryProperty.Static));
-            ai2thorPhysicsScript.SecondaryProperties = (receptacle ? new SimObjSecondaryProperty[] {
-                SimObjSecondaryProperty.Receptacle
-            } : new SimObjSecondaryProperty[] { }).Concat(openable ? new SimObjSecondaryProperty[] {
-                SimObjSecondaryProperty.CanOpen
-            } : new SimObjSecondaryProperty[] { }).ToArray();
+            ai2thorPhysicsScript.PrimaryProperty = SimObjPrimaryProperty.Static;
+            ai2thorPhysicsScript.SecondaryProperties = new SimObjSecondaryProperty[] { };
             ai2thorPhysicsScript.MyColliders = colliders ?? (new Collider[] { });
             ai2thorPhysicsScript.ReceptacleTriggerBoxes = new List<GameObject>().ToArray();
             /* TODO MCS-75 We should let people set these properties in the JSON config file.
@@ -566,6 +605,19 @@ public class MachineCommonSenseMain : MonoBehaviour {
             ai2thorPhysicsScript.HFrbdrag
             ai2thorPhysicsScript.HFrbangulardrag
             */
+        }
+
+        ai2thorPhysicsScript.PrimaryProperty = (pickupable ? SimObjPrimaryProperty.CanPickup : (moveable ?
+            SimObjPrimaryProperty.Moveable : ai2thorPhysicsScript.PrimaryProperty));
+
+        if (receptacle && !ai2thorPhysicsScript.SecondaryProperties.ToList().Contains(SimObjSecondaryProperty.Receptacle)) {
+            ai2thorPhysicsScript.SecondaryProperties = ai2thorPhysicsScript.SecondaryProperties.ToList().Concat(
+                new SimObjSecondaryProperty[] { SimObjSecondaryProperty.Receptacle }).ToArray();
+        }
+
+        if (openable && !ai2thorPhysicsScript.SecondaryProperties.ToList().Contains(SimObjSecondaryProperty.CanOpen)) {
+            ai2thorPhysicsScript.SecondaryProperties = ai2thorPhysicsScript.SecondaryProperties.ToList().Concat(
+                new SimObjSecondaryProperty[] { SimObjSecondaryProperty.CanOpen }).ToArray();
         }
 
         // Always set the uniqueID to a new name (we don't want to use AI2-THOR's default names).
@@ -664,7 +716,11 @@ public class MachineCommonSenseMain : MonoBehaviour {
             transformDefinition.scale.GetZ());
     }
 
-    private Transform[] AssignVisibilityPoints(GameObject gameObject, List<MachineCommonSenseConfigVector> points) {
+    private Transform[] AssignVisibilityPoints(
+        GameObject gameObject,
+        List<MachineCommonSenseConfigVector> points,
+        bool scaleOne
+    ) {
         // The AI2-THOR scripts assume the visibility points have a parent object with the name VisibilityPoints.
         GameObject visibilityPointsParentObject = new GameObject {
             isStatic = true,
@@ -672,6 +728,10 @@ public class MachineCommonSenseMain : MonoBehaviour {
         };
         visibilityPointsParentObject.transform.parent = gameObject.transform;
         visibilityPointsParentObject.transform.localPosition = Vector3.zero;
+        visibilityPointsParentObject.transform.localRotation = Quaternion.identity;
+        if (scaleOne) {
+            visibilityPointsParentObject.transform.localScale = Vector3.one;
+        }
         int index = 0;
         return points.Select((point) => {
             ++index;
@@ -809,27 +869,40 @@ public class MachineCommonSenseMain : MonoBehaviour {
                 (parentObject ?? gameObject).SetActive(false);
             }
         } catch (Exception e) {
-            Debug.LogError("MCS:  " + e);
+            Debug.LogError("MCS: " + e);
         }
     }
 
     private MachineCommonSenseConfigScene LoadCurrentSceneFromFile(String filePath) {
         TextAsset currentSceneFile = Resources.Load<TextAsset>("MCS/Scenes/" + filePath);
-        Debug.Log("MCS:  Config file Assets/Resources/MCS/Scenes/" + filePath + ".json" + (currentSceneFile == null ?
+        Debug.Log("MCS: Config file Assets/Resources/MCS/Scenes/" + filePath + ".json" + (currentSceneFile == null ?
             " is null!" : (":\n" + currentSceneFile.text)));
         return JsonUtility.FromJson<MachineCommonSenseConfigScene>(currentSceneFile.text);
     }
 
-    private MachineCommonSenseConfigMaterialRegistry LoadMaterialRegistryFromFile(String filePath) {
+    private Dictionary<string, List<string>> LoadMaterialRegistryFromFile(String filePath) {
         TextAsset materialRegistryFile = Resources.Load<TextAsset>("MCS/" + filePath);
-        Debug.Log("MCS:  Config file Assets/Resources/MCS/" + filePath + ".json" + (materialRegistryFile == null ?
+        Debug.Log("MCS: Config file Assets/Resources/MCS/" + filePath + ".json" + (materialRegistryFile == null ?
             " is null!" : (":\n" + materialRegistryFile.text)));
-        return JsonUtility.FromJson<MachineCommonSenseConfigMaterialRegistry>(materialRegistryFile.text);
+        MachineCommonSenseConfigMaterialRegistry materialJson =
+            JsonUtility.FromJson<MachineCommonSenseConfigMaterialRegistry>(materialRegistryFile.text);
+        Dictionary<string, List<string>> materialDictionary = new Dictionary<string, List<string>>() {
+            { "block_blank", materialJson.block_blank },
+            { "block_design", materialJson.block_design },
+            { "ceramic", materialJson.ceramic },
+            { "fabric", materialJson.fabric },
+            { "metal", materialJson.metal },
+            { "plastic", materialJson.plastic },
+            { "rubber", materialJson.rubber },
+            { "wall", materialJson.wall },
+            { "wood", materialJson.wood }
+        };
+        return materialDictionary;
     }
 
     private List<MachineCommonSenseConfigObjectDefinition> LoadObjectRegistryFromFile(String filePath) {
         TextAsset objectRegistryFile = Resources.Load<TextAsset>("MCS/" + filePath);
-        Debug.Log("MCS:  Config file Assets/Resources/MCS/" + filePath + ".json" + (objectRegistryFile == null ?
+        Debug.Log("MCS: Config file Assets/Resources/MCS/" + filePath + ".json" + (objectRegistryFile == null ?
             " is null!" : (":\n" + objectRegistryFile.text)));
         MachineCommonSenseConfigObjectRegistry objectRegistry = JsonUtility
             .FromJson<MachineCommonSenseConfigObjectRegistry>(objectRegistryFile.text);
@@ -838,7 +911,7 @@ public class MachineCommonSenseMain : MonoBehaviour {
 
     private void LogVerbose(String text) {
         if (this.enableVerboseLog) {
-            Debug.Log("MCS:  " + text);
+            Debug.Log("MCS: " + text);
         }
     }
 
@@ -991,10 +1064,11 @@ public class MachineCommonSenseMain : MonoBehaviour {
                     gameObject.transform.localScale.z * resize.size.GetZ());
             });
 
-        objectConfig.teleports.Where(teleport => teleport.stepBegin <= step && teleport.stepEnd >= step &&
-            teleport.vector != null).ToList().ForEach((teleport) => {
-                gameOrParentObject.transform.Translate(new Vector3(teleport.vector.x, teleport.vector.y,
-                    teleport.vector.z));
+        objectConfig.teleports.Where(teleport => teleport.stepBegin == step && teleport.position != null).ToList()
+            .ForEach((teleport) => {
+                gameOrParentObject.transform.localPosition = new Vector3(teleport.position.x, teleport.position.y,
+                    teleport.position.z);
+                Debug.Log("TELEPORT " + gameOrParentObject.transform.position.ToString("F4"));
             });
 
         objectConfig.forces.Where(force => force.stepBegin <= step && force.stepEnd >= step && force.vector != null)
@@ -1109,7 +1183,7 @@ public class MachineCommonSenseConfigGameObject : MachineCommonSenseConfigAbstra
     public List<MachineCommonSenseConfigResize> resizes;
     public List<MachineCommonSenseConfigMove> rotates;
     public List<MachineCommonSenseConfigShow> shows;
-    public List<MachineCommonSenseConfigMove> teleports;
+    public List<MachineCommonSenseConfigTeleport> teleports;
     public List<MachineCommonSenseConfigMove> torques;
 
     private GameObject gameObject;
@@ -1147,12 +1221,14 @@ public class MachineCommonSenseConfigMove : MachineCommonSenseConfigStepBeginEnd
 public class MachineCommonSenseConfigObjectDefinition : MachineCommonSenseConfigAbstractObject {
     public string resourceFile;
     public bool primitive;
+    public bool visibilityPointsScaleOne;
     public MachineCommonSenseConfigCollider boundingBox = null;
     public MachineCommonSenseConfigSize scale = null;
     public List<MachineCommonSenseConfigAnimation> animations;
     public List<MachineCommonSenseConfigAnimator> animators;
     public List<MachineCommonSenseConfigCollider> colliders;
     public List<MachineCommonSenseConfigInteractables> interactables;
+    public List<string> materialRestrictions;
     public List<MachineCommonSenseConfigOverride> overrides;
     public List<MachineCommonSenseConfigTransform> receptacleTriggerBoxes;
     public List<MachineCommonSenseConfigVector> visibilityPoints;
@@ -1233,13 +1309,32 @@ public class MachineCommonSenseConfigScene {
     public String wallMaterial;
     public bool observation;
     public bool screenshot;
+    public MachineCommonSenseConfigGoal goal;
     public MachineCommonSenseConfigTransform performerStart = null;
     public List<MachineCommonSenseConfigGameObject> objects;
 }
 
 [Serializable]
+public class MachineCommonSenseConfigTeleport : MachineCommonSenseConfigStepBegin {
+    public MachineCommonSenseConfigVector position;
+}
+
+[Serializable]
+public class MachineCommonSenseConfigGoal {
+    public string description;
+}
+
+[Serializable]
 public class MachineCommonSenseConfigMaterialRegistry {
-    public List<String> materials;
+    public List<String> block_blank;
+    public List<String> block_design;
+    public List<String> ceramic;
+    public List<String> fabric;
+    public List<String> metal;
+    public List<String> plastic;
+    public List<String> rubber;
+    public List<String> wall;
+    public List<String> wood;
 }
 
 [Serializable]

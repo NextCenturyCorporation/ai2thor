@@ -13,7 +13,7 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
 
     // TODO MCS-95 Make the room size configurable in the scene configuration file.
     // The room dimensions are always 5x5 so the distance from corner to corner is around 7.08.
-    public static float MAX_DISTANCE_ACCROSS_ROOM = 7.08f;
+    public static float MAX_DISTANCE_ACROSS_ROOM = 7.08f;
 
     // The number of times to run Physics.Simulate after each action from the player is LOOPS * STEPS.
     public static int PHYSICS_SIMULATION_LOOPS = 5;
@@ -45,7 +45,7 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
 
         int layerMask = (1 << 8); // Only look at objects on the SimObjVisible layer.
         List<RaycastHit> hits = Physics.RaycastAll(this.transform.position, direction,
-            MachineCommonSenseController.MAX_DISTANCE_ACCROSS_ROOM, layerMask).ToList();
+            MachineCommonSenseController.MAX_DISTANCE_ACROSS_ROOM, layerMask).ToList();
         if (hits.Count == 0) {
             this.errorMessage = "Cannot find any object on the directional vector.";
             this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.NOT_OBJECT);
@@ -71,7 +71,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
     }
 
     public override bool DropHandObject(ServerAction action) {
-        bool continueAction = TryConvertingEachObjectDirectionToId(action);
+        // Use held object instead of direction for objectId (if needed)
+        bool continueAction = TryObjectIdFromHeldObject(action);
 
         if (!continueAction) {
             return false;
@@ -109,7 +110,7 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
         }
 
         List<string> visibleObjectIds = this.GetAllVisibleSimObjPhysics(this.m_Camera,
-            MachineCommonSenseController.MAX_DISTANCE_ACCROSS_ROOM).Select((obj) => obj.UniqueID).ToList();
+            MachineCommonSenseController.MAX_DISTANCE_ACROSS_ROOM).Select((obj) => obj.UniqueID).ToList();
 
         ObjectMetadata[] objectMetadata = base.generateObjectMetadata().ToList().Select((metadata) => {
             // The "visible" property in the ObjectMetadata really describes if the object is within reach.
@@ -214,6 +215,29 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
         return this.agentManager.UpdateMetadataColors(this, metadata);
     }
 
+    /**
+     * For actions where there is an object in the agent's hand, check the held object
+     * for an object ID if one isn't given.
+     *
+     * Note: This may need to change later when the held object is visible
+     * or the agent has two hands to use.
+     */
+    private string GetHeldObjectId(string previousObjectId) {
+        if ((previousObjectId != null) && (!previousObjectId.Equals(""))) {
+            return previousObjectId;
+        } else {
+            if (ItemInHand != null) {
+                return ItemInHand.GetComponent<SimObjPhysics>().uniqueID;
+            } else {
+                errorMessage = "No object found in hand.";
+                Debug.Log(errorMessage);
+                actionFinished(false);
+                this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.NOT_HELD);
+                return previousObjectId;
+            }
+        }
+    }
+
     public override void Initialize(ServerAction action) {
         base.Initialize(action);
 
@@ -263,6 +287,15 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
         if (objectMetadata.objectBounds == null && simObj.BoundingBox != null) {
             objectMetadata.objectBounds = this.WorldCoordinatesOfBoundingBox(simObj);
         }
+        if (objectMetadata.objectBounds != null) {
+            MachineCommonSenseMain main = GameObject.Find("MCS").GetComponent<MachineCommonSenseMain>();
+            if (main != null && main.enableVerboseLog) {
+                Debug.Log("MCS: " + objectMetadata.objectId + " CENTER = " +
+                    simObj.BoundingBox.transform.position.ToString("F4"));
+                Debug.Log("MCS: " + objectMetadata.objectId + " BOUNDS = " + String.Join(", ",
+                    objectMetadata.objectBounds.objectBoundsCorners.Select(point => point.ToString("F4")).ToArray()));
+            }
+        }
 
         return objectMetadata;
     }
@@ -305,6 +338,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
     public override void ProcessControlCommand(ServerAction controlCommand) {
         // Never let the placeable objects ignore the physics simulation (they should always be affected by it).
         controlCommand.placeStationary = false;
+
+        Debug.Log("MCS: Action = " + controlCommand.action);
 
         base.ProcessControlCommand(controlCommand);
 
@@ -350,7 +385,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
     }
 
     public override void PutObject(ServerAction action) {
-        bool continueAction = TryConvertingEachObjectDirectionToId(action);
+        // Use held object instead of direction for objectId (if needed)
+        bool continueAction = TryObjectIdFromHeldObject(action);
 
         if (!continueAction) {
             return;
@@ -490,7 +526,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
     }
 
     public override void ThrowObject(ServerAction action) {
-        bool continueAction = TryConvertingEachObjectDirectionToId(action);
+        // Use held object instead of direction for objectId (if needed)
+        bool continueAction = TryObjectIdFromHeldObject(action);
 
         if (!continueAction) {
             return;
@@ -543,6 +580,19 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
     private bool TryConvertingEachObjectDirectionToId(ServerAction action) {
         action.objectId = this.ConvertObjectDirectionToId(action.objectDirection,
             action.objectId);
+
+        return TryReceptacleObjectIdFromDirection(action);
+    }
+
+    private bool TryObjectIdFromHeldObject(ServerAction action) {
+        // Can't currently use direction for objects in player's hand, since held objects are currently invisible
+        action.objectId = this.GetHeldObjectId(action.objectId);
+
+        // For receptacleObjectId (if needed), still using direction
+        return TryReceptacleObjectIdFromDirection(action);
+    }
+
+    private bool TryReceptacleObjectIdFromDirection(ServerAction action) {
         if (!this.actionComplete) {
             action.receptacleObjectId = this.ConvertObjectDirectionToId(action.receptacleObjectDirection,
                 action.receptacleObjectId);
