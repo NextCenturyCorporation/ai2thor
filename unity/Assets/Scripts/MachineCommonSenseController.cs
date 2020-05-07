@@ -148,8 +148,8 @@ public class MachineCommonSenseController : PhysicsRemoteFPSAgentController {
         bool objectIsOnTopOfSomething = Physics.Raycast(target.transform.position, Vector3.down, out hitInfo);
 
         // TODO: MCS-88: Check this with receptacles and playmat?
-        if (objectIsOnTopOfSomething && hitInfo.rigidbody != null) {
-            ignoreCollisions.Add(hitInfo.rigidbody.gameObject);
+        if (objectIsOnTopOfSomething && hitInfo.transform != null) {
+            ignoreCollisions.Add(hitInfo.transform.gameObject);
         }
 
         if (UtilityFunctions.isObjectColliding(target.gameObject, ignoreCollisions)) {
