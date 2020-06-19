@@ -780,7 +780,7 @@ public class MCSMain : MonoBehaviour {
     }
 
     private void AssignPhysicsMaterialAndRigidBodyValues
-        (MCSConfigAbstractObject physicsObject,
+        (MCSConfigPhysicsProperties physicsObject,
         GameObject gameObject, SimObjPhysics ai2thorPhysicsScript
         ) {
             ai2thorPhysicsScript.HFdynamicfriction = physicsObject.dynamicFriction;
@@ -1468,12 +1468,13 @@ public class MCSConfigScene {
     public String wallMaterial;
     public bool observation;
     public bool screenshot;
+    
     public MCSConfigGoal goal;
     public MCSConfigTransform performerStart = null;
     public List<MCSConfigGameObject> objects;
     public MCSConfigPhysicsProperties floorProperties;
     public MCSConfigPhysicsProperties wallProperties;
-
+}
 
 [Serializable]
 public class MCSConfigTeleport : MCSConfigStepBegin {
