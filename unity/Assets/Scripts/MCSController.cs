@@ -503,7 +503,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         // "Using step values greater than 0.03 is likely to produce inaccurate results."
         for (int i = 0; i < MCSController.PHYSICS_SIMULATION_STEPS; ++i) {
             // Simulate the physics a little more on initialization so that the objects can settle down onto the floor.
-            Physics.Simulate(this.step == 0 ? 0.02f : 0.01f);
+            // MCS-339
+            // Physics.Simulate(this.step == 0 ? 0.02f : 0.01f);
         }
     }
 

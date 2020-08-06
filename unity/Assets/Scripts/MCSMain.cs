@@ -73,8 +73,10 @@ public class MCSMain : MonoBehaviour {
         this.wallBack = GameObject.Find("Wall Back");
 
         // Disable all physics simulation (we re-enable it on each step in MachineCommonSenseController).
-        Physics.autoSimulation = false;
-        this.physicsSceneManager.physicsSimulationPaused = true;
+        // MCS-339
+        // Physics.autoSimulation = false;
+        // MCS-339
+        // this.physicsSceneManager.physicsSimulationPaused = true;
 
         // Load the configurable game objects from our custom registry files.
         List<MCSConfigObjectDefinition> ai2thorObjects = LoadObjectRegistryFromFile(
