@@ -65,6 +65,11 @@ public class ImageSynthesis : MonoBehaviour {
 
 	public float opticalFlowSensitivity;
 
+	[Range(0.0f, 1.0f)]
+	public float depthPowerScale = 0.8f;
+	[Range(1f, 100f)]
+	public float depthFarClipPlane = 1.0f;
+	
 	private Dictionary<int, string> nonSimObjUniqueIds = new Dictionary<int, string>();
 
 	// cached materials
@@ -111,6 +116,13 @@ public class ImageSynthesis : MonoBehaviour {
 		OnCameraChange();
 		OnSceneChange();
 
+	}
+
+	void OnValidate()
+	{
+		if (depthMaterial != null)
+			depthMaterial.SetFloat("_DepthPower", depthPowerScale);
+		capturePasses[1].camera.farClipPlane = depthFarClipPlane;
 	}
 
 	void LateUpdate()
@@ -227,8 +239,11 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!depthMaterial || depthMaterial.shader != depthShader) {
 			depthMaterial = new Material (depthShader);	
 		}
+		
 		//capturePasses [1].camera.farClipPlane = 100;
 		//SetupCameraWithReplacementShader(capturePasses[1].camera, uberReplacementShader, ReplacelementModes.DepthMultichannel);
+		depthFarClipPlane = capturePasses[1].camera.farClipPlane;
+		depthMaterial.SetFloat("_DepthPower", depthPowerScale);
 		SetupCameraWithPostShader(capturePasses[1].camera, depthMaterial, DepthTextureMode.Depth);
 
 
