@@ -755,7 +755,7 @@ public class SimObjPhysics : MonoBehaviour, SimpleSimObj
 			new PhysicsMaterialValues(MyColliders[i].material.dynamicFriction, MyColliders[i].material.staticFriction, MyColliders[i].material.bounciness);
 		}
 
-        myRigidbody = gameObject.GetComponentInParent<Rigidbody>();
+        myRigidbody = gameObject.GetComponent<Rigidbody>();
 
 		Rigidbody rb = myRigidbody;
 
