@@ -35,7 +35,8 @@ public class MCSPerformerManager : AgentManager {
     public override IEnumerator EmitFrame() {
         // Set renderImage to false before calling AgentManager.EmitFrame because we've rendered all the images already
         // and we don't want AgentManager.EmitFrame to re-render the images.
-        this.renderImage = false;
+        //this.renderImage = false;
+        this.renderImage = renderImageOverride;
         return base.EmitFrame();
     }
 
@@ -69,10 +70,12 @@ public class MCSPerformerManager : AgentManager {
     }
 
     public void SaveImages(ImageSynthesis imageSynthesis) {
+#if false
         if (this.renderImage) {
             byte[] image = this.captureScreen();
             this.imageList.Add(image);
         }
+#endif
         this.SaveImageForActionOutput(imageSynthesis, this.renderClassImage, "_class", this.imageClassList);
         this.SaveImageForActionOutput(imageSynthesis, this.renderDepthImage, "_depth", this.imageDepthList);
         this.SaveImageForActionOutput(imageSynthesis, this.renderFlowImage, "_flow", this.imageFlowList);

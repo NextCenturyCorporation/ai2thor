@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityStandardAssets.Characters.FirstPerson;
 using System.Linq;
 using System.Collections.Generic;
+using Unity.Profiling;
 
 public class MCSController : PhysicsRemoteFPSAgentController {
     public static float STANDING_POSITION_Y = 0.4625f;
@@ -495,7 +496,12 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.SUCCESSFUL);
     }
 
+    static ProfilerMarker simulatePhysicsMarker = new ProfilerMarker("MCS_SimulatePhysicsMarker");
+
     public void SimulatePhysics() {
+
+        simulatePhysicsMarker.Begin();
+
         if (this.agentManager.renderImage) {
             // We only need to save ONE image of the scene after initialization.
             StartCoroutine(this.SimulatePhysicsSaveImagesIncreaseStep(this.step == 0 ? 1 : this.substeps));
@@ -508,6 +514,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
             // Notify the AgentManager to send the action output metadata and images to the Python API.
             ((MCSPerformerManager)this.agentManager).FinalizeEmit();
         }
+
+        simulatePhysicsMarker.End();
     }
 
     private void SimulatePhysicsCompletely() {

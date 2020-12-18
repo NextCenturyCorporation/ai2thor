@@ -23,16 +23,24 @@ public class AgentManager : MonoBehaviour
 	private Rect readPixelsRect;
 	private int currentSequenceId;
 	private int activeAgentId;
+	public bool renderImageOverride = false;
 	public bool renderImage = true;
-	protected bool renderDepthImage;
+	public bool renderDepthImageOverride = false;
+	protected bool renderDepthImage = false;
+	public bool renderClassImageOverride = false;
 	protected bool renderClassImage;
+	public bool renderObjectImageOverride = false;
 	protected bool renderObjectImage;
+	public bool renderNormalsImageOverride = false;
 	protected bool renderNormalsImage;
+	public bool renderFlowImageOverride = false;
     protected bool renderFlowImage;
 	private bool synchronousHttp = true;
 	private Socket sock = null;
 	private List<Camera> thirdPartyCameras = new List<Camera>();
 	private bool readyToEmit;
+
+	public bool skipTransmit = false;
 
 	private Color[] agentColors = new Color[]{Color.blue, Color.yellow, Color.green, Color.red, Color.magenta, Color.grey};
 
@@ -85,6 +93,12 @@ public class AgentManager : MonoBehaviour
 		Debug.Log("Graphics Tier: " + Graphics.activeTier);
 		this.agents.Add (primaryAgent);
 
+		this.renderDepthImage = this.renderDepthImageOverride;
+		this.renderClassImage = this.renderClassImageOverride;
+		this.renderObjectImage = this.renderObjectImageOverride;
+		this.renderNormalsImage = this.renderNormalsImageOverride;
+		this.renderFlowImage = this.renderFlowImageOverride;
+
         physicsSceneManager = GameObject.Find("PhysicsSceneManager").GetComponent<PhysicsSceneManager>();
 	}
 
@@ -120,11 +134,11 @@ public class AgentManager : MonoBehaviour
         
 		primaryAgent.ProcessControlCommand (action);
 		primaryAgent.IsVisible = action.makeAgentsVisible;
-		this.renderClassImage = action.renderClassImage;
-		this.renderDepthImage = action.renderDepthImage;
-		this.renderNormalsImage = action.renderNormalsImage;
-		this.renderObjectImage = action.renderObjectImage;
-        this.renderFlowImage = action.renderFlowImage;
+		this.renderClassImage = action.renderClassImage || renderClassImageOverride;
+		this.renderDepthImage = action.renderDepthImage || renderDepthImageOverride;
+		this.renderNormalsImage = action.renderNormalsImage || renderNormalsImageOverride;
+		this.renderObjectImage = action.renderObjectImage || renderObjectImageOverride;
+        this.renderFlowImage = action.renderFlowImage || renderFlowImageOverride;
 
 		if (action.alwaysReturnVisibleRange) {
 			((PhysicsRemoteFPSAgentController) primaryAgent).alwaysReturnVisibleRange = action.alwaysReturnVisibleRange;
@@ -595,97 +609,114 @@ public class AgentManager : MonoBehaviour
         form.AddField("metadata", serializedMetadata);
         form.AddField("token", robosimsClientToken);
 
-        #if !UNITY_WEBGL 
-		if (synchronousHttp) {
+		if (!skipTransmit)
+		{
 
-
-			if (this.sock == null) {
-				// Debug.Log("connecting to host: " + robosimsHost);
-				IPAddress host = IPAddress.Parse(robosimsHost);
-				IPEndPoint hostep = new IPEndPoint(host, robosimsPort);
-				this.sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                try {
-				    this.sock.Connect(hostep);
-                }
-                catch (SocketException e) {
-                    Debug.Log("Socket exception: " + e.ToString());
-                }
-			}
-            
-
-            if (this.sock != null && this.sock.Connected) {
-                byte[] rawData = form.data;
-
-                string request = "POST /train HTTP/1.1\r\n" +
-                "Content-Length: " + rawData.Length.ToString() + "\r\n";
-
-                foreach(KeyValuePair<string, string> entry in form.headers) {
-                    request += entry.Key + ": " + entry.Value + "\r\n";
-                }
-                request += "\r\n";
-
-                int sent = this.sock.Send(Encoding.ASCII.GetBytes(request));
-                sent = this.sock.Send(rawData);
-
-                // waiting for a frame here keeps the Unity window in sync visually
-                // its not strictly necessary, but allows the interact() command to work properly
-                // and does not reduce the overall FPS
-                yield return new WaitForEndOfFrame();
-
-                byte[] headerBuffer = new byte[1024];
-                int bytesReceived = 0;
-                byte[] bodyBuffer = null;
-                int bodyBytesReceived = 0;
-                int contentLength = 0;
-
-                // read header
-                while (true) {
-                    int received = this.sock.Receive(headerBuffer, bytesReceived, headerBuffer.Length - bytesReceived, SocketFlags.None);	
-                    if (received == 0) {
-                        Debug.LogError("0 bytes received attempting to read header - connection closed");
-                        break;
-                    }
-
-                    bytesReceived += received;;
-                    string headerMsg = Encoding.ASCII.GetString(headerBuffer, 0, bytesReceived);
-                    int offset = headerMsg.IndexOf("\r\n\r\n");
-                    if (offset > 0){
-                        contentLength = parseContentLength(headerMsg.Substring(0, offset));
-                        bodyBuffer = new byte[contentLength];
-                        bodyBytesReceived = bytesReceived - (offset + 4);
-                        Array.Copy(headerBuffer, offset + 4, bodyBuffer, 0, bodyBytesReceived);
-                        break;
-                    }
-                }
-
-                // read body
-                while (bodyBytesReceived < contentLength) {
-                    // check for 0 bytes received
-                    int received = this.sock.Receive(bodyBuffer, bodyBytesReceived, bodyBuffer.Length - bodyBytesReceived, SocketFlags.None);	
-                    if (received == 0) {
-                        Debug.LogError("0 bytes received attempting to read body - connection closed");
-                        break;
-                    }
-
-                    bodyBytesReceived += received;
-                    //Debug.Log("total bytes received: " + bodyBytesReceived);
-                }
-
-                string msg = Encoding.ASCII.GetString(bodyBuffer, 0, bodyBytesReceived);
-                ProcessControlCommand(msg);
-            }
-		} else {
-
-			using (var www = UnityWebRequest.Post("http://" + robosimsHost + ":" + robosimsPort + "/train", form))
+#if !UNITY_WEBGL
+			if (synchronousHttp)
 			{
-				yield return www.SendWebRequest();
 
-				if (www.isNetworkError || www.isHttpError)
+
+				if (this.sock == null)
 				{
-					Debug.Log("Error: " + www.error);
-					yield break;
+					// Debug.Log("connecting to host: " + robosimsHost);
+					IPAddress host = IPAddress.Parse(robosimsHost);
+					IPEndPoint hostep = new IPEndPoint(host, robosimsPort);
+					this.sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+					try
+					{
+						this.sock.Connect(hostep);
+					}
+					catch (SocketException e)
+					{
+						Debug.Log("Socket exception: " + e.ToString());
+					}
 				}
-				ProcessControlCommand(www.downloadHandler.text);
+
+
+				if (this.sock != null && this.sock.Connected)
+				{
+					byte[] rawData = form.data;
+
+					string request = "POST /train HTTP/1.1\r\n" +
+					"Content-Length: " + rawData.Length.ToString() + "\r\n";
+
+					foreach (KeyValuePair<string, string> entry in form.headers)
+					{
+						request += entry.Key + ": " + entry.Value + "\r\n";
+					}
+					request += "\r\n";
+
+					int sent = this.sock.Send(Encoding.ASCII.GetBytes(request));
+					sent = this.sock.Send(rawData);
+
+					// waiting for a frame here keeps the Unity window in sync visually
+					// its not strictly necessary, but allows the interact() command to work properly
+					// and does not reduce the overall FPS
+					yield return new WaitForEndOfFrame();
+
+					byte[] headerBuffer = new byte[1024];
+					int bytesReceived = 0;
+					byte[] bodyBuffer = null;
+					int bodyBytesReceived = 0;
+					int contentLength = 0;
+
+					// read header
+					while (true)
+					{
+						int received = this.sock.Receive(headerBuffer, bytesReceived, headerBuffer.Length - bytesReceived, SocketFlags.None);
+						if (received == 0)
+						{
+							Debug.LogError("0 bytes received attempting to read header - connection closed");
+							break;
+						}
+
+						bytesReceived += received; ;
+						string headerMsg = Encoding.ASCII.GetString(headerBuffer, 0, bytesReceived);
+						int offset = headerMsg.IndexOf("\r\n\r\n");
+						if (offset > 0)
+						{
+							contentLength = parseContentLength(headerMsg.Substring(0, offset));
+							bodyBuffer = new byte[contentLength];
+							bodyBytesReceived = bytesReceived - (offset + 4);
+							Array.Copy(headerBuffer, offset + 4, bodyBuffer, 0, bodyBytesReceived);
+							break;
+						}
+					}
+
+					// read body
+					while (bodyBytesReceived < contentLength)
+					{
+						// check for 0 bytes received
+						int received = this.sock.Receive(bodyBuffer, bodyBytesReceived, bodyBuffer.Length - bodyBytesReceived, SocketFlags.None);
+						if (received == 0)
+						{
+							Debug.LogError("0 bytes received attempting to read body - connection closed");
+							break;
+						}
+
+						bodyBytesReceived += received;
+						//Debug.Log("total bytes received: " + bodyBytesReceived);
+					}
+
+					string msg = Encoding.ASCII.GetString(bodyBuffer, 0, bodyBytesReceived);
+					ProcessControlCommand(msg);
+				}
+			}
+			else
+			{
+
+				using (var www = UnityWebRequest.Post("http://" + robosimsHost + ":" + robosimsPort + "/train", form))
+				{
+					yield return www.SendWebRequest();
+
+					if (www.isNetworkError || www.isHttpError)
+					{
+						Debug.Log("Error: " + www.error);
+						yield break;
+					}
+					ProcessControlCommand(www.downloadHandler.text);
+				}
 			}
 		}
         #endif
@@ -715,7 +746,9 @@ public class AgentManager : MonoBehaviour
 		JsonUtility.FromJsonOverwrite(msg, controlCommand);
 
 		this.currentSequenceId = controlCommand.sequenceId;
-		this.renderImage = controlCommand.renderImage;
+
+		this.renderImage = renderImageOverride || controlCommand.renderImage;
+
 		activeAgentId = controlCommand.agentId;
 
 		if (controlCommand.action == "Reset") {
@@ -1033,7 +1066,9 @@ public class ServerAction
 	public int numPlacementAttempts;
 	public bool randomizeObjectAppearance;
 	public bool renderImage = true;
+
 	public bool renderDepthImage;
+	
 	public bool renderClassImage;
 	public bool renderObjectImage;
 	public bool renderNormalsImage;

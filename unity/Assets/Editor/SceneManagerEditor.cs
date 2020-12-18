@@ -223,7 +223,7 @@ public class SceneManagerEditor : Editor
 
 public class NaturalStringComparer : IComparer<string>
 {
-	private static readonly Regex _re = new Regex(@"(?<=\D)(?=\d)|(?<=\d)(?=\D)", RegexOptions.Compiled);
+	static readonly Regex _re = new Regex(@"(?<=\D)(?=\d)|(?<=\d)(?=\D)", RegexOptions.None);//RegexOptions.Compiled);
 
 	public int Compare(string x, string y)
 	{
