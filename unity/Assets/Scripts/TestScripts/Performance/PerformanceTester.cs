@@ -9,7 +9,7 @@ namespace PerformanceTests
     public abstract class PerformanceTester
     {
         const string k_SceneName = "MCS";
-        Vector2Int m_Resolution;
+        protected Vector2Int m_Resolution;
         bool m_CaptureRgb;
         bool m_CaptureDepthMaps;
         bool m_CaptureObjectMasks;
@@ -27,8 +27,9 @@ namespace PerformanceTests
         }
 
         [SetUp]
-        public void SetUpTest()
+        public void SetUp()
         {
+            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
         }
 
         [TearDown]
@@ -39,27 +40,30 @@ namespace PerformanceTests
         [PerformanceUnityTest]
         public IEnumerator ExecuteTest()
         {
-            
-            
             var asyncLoad = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(k_SceneName);
 
             yield return new WaitUntil(() => asyncLoad.isDone);
             
-            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, false);
-            
             var physicsSceneManager = GameObject.Find("PhysicsSceneManager");
+            
+            // This only works on standalone, I'm still trying to find out if there is a way to do this
+            // in editor
+            Screen.SetResolution(1024, 768, false);
+            yield return null;
+            yield return null;
+            yield return null;
+
             var mcs = physicsSceneManager.GetComponent<MCSPerformerManager>();
-            mcs.renderImageOverride = m_CaptureRgb;
-            mcs.renderDepthImageOverride = m_CaptureDepthMaps;
-            mcs.renderObjectImageOverride = m_CaptureObjectMasks;
+            
+            mcs.SetRenderImageOverride(m_CaptureRgb);
+            mcs.SetRenderDepthImageOverride(m_CaptureDepthMaps);
+            mcs.SetRenderObjectImageOverride(m_CaptureObjectMasks);
             
             var holder = new GameObject("MockHolder");
             var moq = holder.AddComponent<EventMocker>();
             
-            yield return Measure.Frames().WarmupCount(10).MeasurementCount(50).Run();
-
+            yield return Measure.Frames().WarmupCount(10).MeasurementCount(100).Run();
             moq.Stop();
-            
             yield return new WaitForSeconds(5);
         }
     }
@@ -71,6 +75,12 @@ namespace PerformanceTests
     [Category("Performance")]
     public class PerformanceTestAllOutputs : PerformanceTester
     {
+        [SetUp]
+        public void SetUp()
+        {
+            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+        }
+        
         public PerformanceTestAllOutputs(int resx, int resy) : base(resx, resy, true, true, true) { }
     }
     
@@ -81,6 +91,11 @@ namespace PerformanceTests
     [Category("Performance")]
     public class PerformanceTestRgb : PerformanceTester
     {
+        public void SetUp()
+        {
+            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+        }
+        
         public PerformanceTestRgb(int resx, int resy) : base(resx, resy, true, false, false) { }
     }
     
@@ -91,6 +106,11 @@ namespace PerformanceTests
     [Category("Performance")]
     public class PerformanceTestDepth : PerformanceTester
     {
+        public void SetUp()
+        {
+            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+        }
+        
         public PerformanceTestDepth(int resx, int resy) : base(resx, resy, false, true, false) { }
     }
     
@@ -101,6 +121,11 @@ namespace PerformanceTests
     [Category("Performance")]
     public class PerformanceTestObjectMask : PerformanceTester
     {
+        public void SetUp()
+        {
+            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+        }
+        
         public PerformanceTestObjectMask(int resx, int resy) : base(resx, resy, false, false, true) { }
     }
 }

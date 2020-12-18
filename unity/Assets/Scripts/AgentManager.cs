@@ -86,6 +86,23 @@ public class AgentManager : MonoBehaviour
 
 	}
 
+	public void SetRenderImageOverride(bool value)
+	{
+		this.renderImageOverride = value;
+	}
+	
+	public void SetRenderDepthImageOverride(bool value)
+	{
+		this.renderDepthImageOverride = value;
+		this.renderDepthImage = value;
+	}
+
+	public void SetRenderObjectImageOverride(bool value)
+	{
+		this.renderObjectImageOverride = value;
+		this.renderObjectImage = value;
+	}
+	
 	void Start() {
 		initializePrimaryAgent();
         primaryAgent.actionDuration = this.actionDuration;
