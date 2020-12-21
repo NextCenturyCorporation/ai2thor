@@ -24,12 +24,15 @@ namespace PerformanceTests
             this.m_CaptureRgb = captureRgb;
             this.m_CaptureDepthMaps = captureDepthMaps;
             this.m_CaptureObjectMasks = captureObjectMasks;
+
+            SetScreenResolution(this.m_Resolution.x, this.m_Resolution.y);
         }
 
         [SetUp]
         public void SetUp()
         {
-            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);  
+            SetScreenResolution(this.m_Resolution.x, this.m_Resolution.y);
         }
 
         [TearDown]
@@ -45,10 +48,10 @@ namespace PerformanceTests
             yield return new WaitUntil(() => asyncLoad.isDone);
             
             var physicsSceneManager = GameObject.Find("PhysicsSceneManager");
-            
+
             // This only works on standalone, I'm still trying to find out if there is a way to do this
             // in editor
-            Screen.SetResolution(1024, 768, false);
+            SetScreenResolution(1024, 768, false);
             yield return null;
             yield return null;
             yield return null;
@@ -66,6 +69,15 @@ namespace PerformanceTests
             moq.Stop();
             yield return new WaitForSeconds(5);
         }
+
+        public void SetScreenResolution(int width, int height, bool fullscreen = true)
+        {
+#if UNITY_EDITOR
+            GameWindow.SetResolution(width, height);
+#else
+            Screen.SetResolution(width, height, fullscreen);
+#endif
+        }
     }
 
     [TestFixture(320, 240)]
@@ -78,9 +90,9 @@ namespace PerformanceTests
         [SetUp]
         public void SetUp()
         {
-            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);           
         }
-        
+
         public PerformanceTestAllOutputs(int resx, int resy) : base(resx, resy, true, true, true) { }
     }
     
@@ -93,9 +105,9 @@ namespace PerformanceTests
     {
         public void SetUp()
         {
-            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
         }
-        
+
         public PerformanceTestRgb(int resx, int resy) : base(resx, resy, true, false, false) { }
     }
     
@@ -108,9 +120,9 @@ namespace PerformanceTests
     {
         public void SetUp()
         {
-            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
         }
-        
+
         public PerformanceTestDepth(int resx, int resy) : base(resx, resy, false, true, false) { }
     }
     
@@ -123,9 +135,9 @@ namespace PerformanceTests
     {
         public void SetUp()
         {
-            Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
+            //Screen.SetResolution(this.m_Resolution.x, this.m_Resolution.y, true);
         }
-        
+
         public PerformanceTestObjectMask(int resx, int resy) : base(resx, resy, false, false, true) { }
     }
 }
