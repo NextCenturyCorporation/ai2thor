@@ -51,7 +51,7 @@ namespace PerformanceTests
 
             // This only works on standalone, I'm still trying to find out if there is a way to do this
             // in editor
-            SetScreenResolution(1024, 768, false);
+            //SetScreenResolution(1024, 768, false);
             yield return null;
             yield return null;
             yield return null;
