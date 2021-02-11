@@ -65,6 +65,9 @@ public class ImageSynthesis : MonoBehaviour {
 
 	public float opticalFlowSensitivity;
 
+	[Range(0.0f, 1.0f)]
+	public float depthPowerScale = 0.8f;
+	
 	private Dictionary<int, string> nonSimObjUniqueIds = new Dictionary<int, string>();
 
 	// cached materials
@@ -113,11 +116,21 @@ public class ImageSynthesis : MonoBehaviour {
 
 	}
 
+	void OnValidate()
+	{
+		if (depthMaterial != null)
+			depthMaterial.SetFloat("_DepthPower", depthPowerScale);
+	}
+
 	void LateUpdate()
 	{
 		#if UNITY_EDITOR
 		if (DetectPotentialSceneChangeInEditor())
 			OnSceneChange();
+
+		// verify that the depth shader camera and main camera far clip planes are the same
+		var mainCamera = GetComponent<Camera>();
+		capturePasses[1].camera.farClipPlane = mainCamera.farClipPlane;
 
 		#endif // UNITY_EDITOR
 
@@ -227,8 +240,10 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!depthMaterial || depthMaterial.shader != depthShader) {
 			depthMaterial = new Material (depthShader);	
 		}
+		
 		//capturePasses [1].camera.farClipPlane = 100;
 		//SetupCameraWithReplacementShader(capturePasses[1].camera, uberReplacementShader, ReplacelementModes.DepthMultichannel);
+		depthMaterial.SetFloat("_DepthPower", depthPowerScale);
 		SetupCameraWithPostShader(capturePasses[1].camera, depthMaterial, DepthTextureMode.Depth);
 
 

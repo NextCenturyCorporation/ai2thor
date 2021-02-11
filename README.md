@@ -15,15 +15,10 @@ Note for Linux developers: The AI2-THOR v2.2.0 documetation instructs us to use 
 Note that while installing and/or launching Unity, you may get an error about `libgconf-2.so.4`.  You should be able to solve this issue by `sudo apt install`-ing the library.
 
 1. Download the `2018.3.0f2` "Official Installer" from the Unity Linux Editor forums [here](https://forum.unity.com/threads/unity-on-linux-release-notes-and-known-issues.350256/page-2#post-4009651).  The download is called `UnitySetup-2018.3.0f2`.
-
 2. Run the `UnitySetup-2018.3.0f2` executable (you may need to `chmod` it).  This should install a `Unity-2018.3.0f2` folder.
-
 3. In `Unity-2018.3.0f2/Editor/` run the `Unity` executable to start the Unity Hub.
-
 4. Enter your MCS Unity License info into the Unity Hub.
-
 5. In the Unity Hub, under the Projects tab, click Open and select the `/unity/` folder in your local clone of this repository.  This should add a "unity" project to your Projects list.
-
 6. Double-click the "unity" project to launch the Unity Editor.  See [Run](#run) below for usage information.  Please note that the initial load of this project in the Unity Editor will take a long time.
 
 ### Assets
@@ -35,20 +30,17 @@ Checkout the [MCS private GitHub repository](https://github.com/NextCenturyCorpo
 If you want to run an MCS Scene in the Unity Editor:
 
 1. Open the MCS Scene: `File->Open Scene` then select `Assets/Scenes/MCS.unity`
-
 2. By default, in the Unity Editor, see the Hierarchy window on the left, the Scene and Game windows in the middle, the Inspector window on the right, and the Project and Console windows at the bottom.
-  - The Hierarchy window lists the Game Objects in the Scene.
-  - The Scene and Game windows show the Scene.
-  - The Inspector window lists the properties, scripts, materials, and other components of the selected Game Object.
-  - The Project window shows the files in the current project.
-  - The Console window shows the logs and errors.
+
+- The Hierarchy window lists the Game Objects in the Scene.
+- The Scene and Game windows show the Scene.
+- The Inspector window lists the properties, scripts, materials, and other components of the selected Game Object.
+- The Project window shows the files in the current project.
+- The Console window shows the logs and errors.
 
 3. To successfully run an MCS Scene, copy a JSON scene configuration file from the [scenes folder in our MCS GitHub repository](https://github.com/NextCenturyCorporation/MCS/tree/master/python_api/scenes) into the [`unity/Assets/Resources/MCS/Scenes/`](./unity/Assets/Resources/MCS/Scenes/) folder, or identify a JSON file in the folder to use (like `playroom.json`).
-
 4. Click on the `MCS` Game Object in the Hierarchy window. Then, in the Inspector Window, under the `MCS Main (Script)` component, enter the name of your selected JSON file in the `"Default Scene File"` property WITHOUT the `.json` extension.
-
 5. If you want to see the class/depth/object masks, click on the `FPSController->FirstPersonCharacter` Game Object in the Hierarchy window, then toggle-on the checkbox next to the `Image Synthesis (Script)` component in the Inspector window to activate that script. You can see the masks during a run using the Display dropdown in the Game window.
-
 6. Click the Play button in the top center of the Unity Editor to run the Scene. See the list of [keys and parameters](#keys-and-parameters) below. To set action parameters, click the `FPSController` Game Object in the Hierarchy window, then use the inputs under `Debug Discrete Agent Controller (Script)`. See [`unity/Assets/Scripts/DebugDiscreteAgentController.cs`](./unity/Assets/Scripts/DebugDiscreteAgentController.cs) for additional key bindings.
 
 #### Keys and Parameters
@@ -114,9 +106,9 @@ tar -czvf MCS-AI2-THOR-Unity-App-<version>_Data.tar.gz MCS-AI2-THOR-Unity-App-<v
 - [`unity/Assets/Scripts/MachineCommonSensePerformerManager.cs`](./unity/Assets/Scripts/MachineCommonSensePerformerManager.cs)  A custom subclass extending AI2-THOR's [AgentManager](./unity/Assets/Scripts/AgentManager.cs) that handles the communication between the Python API and the Unity Scene.
 - [`unity/Assets/Scripts/MachineCommonSenseSceneManager.cs`](./unity/Assets/Scripts/MachineCommonSenseSceneManager.cs)  A custom subclass extending AI2-THOR's [PhysicsSceneManager](./unity/Assets/Scripts/PhysicsSceneManager.cs) that handles scene state.
 - [`unity/Assets/Resources/MCS/`](./unity/Assets/Resources/MCS)  Folder containing all MCS runtime resources.
-- [`unity/Assets/Resources/MCS/ai2thor_object_registry.json`](./unity/Assets/Resources/MCS/ai2thor_object_registry.json)  Config file containing the MCS Scene's specific Game Objects borrowed from the AI2-THOR framework that may be loaded at runtime. 
-- [`unity/Assets/Resources/MCS/mcs_object_registry.json`](./unity/Assets/Resources/MCS/mcs_object_registry.json)  Config file containing the MCS Scene's specific custom Game Objects that may be loaded at runtime. 
-- [`unity/Assets/Resources/MCS/primitive_object_registry.json`](./unity/Assets/Resources/MCS/primitive_object_registry.json)  Config file containing the MCS Scene's Unity Primitive Game Objects that may be loaded at runtime. 
+- [`unity/Assets/Resources/MCS/ai2thor_object_registry.json`](./unity/Assets/Resources/MCS/ai2thor_object_registry.json)  Config file containing the MCS Scene's specific Game Objects borrowed from the AI2-THOR framework that may be loaded at runtime.
+- [`unity/Assets/Resources/MCS/mcs_object_registry.json`](./unity/Assets/Resources/MCS/mcs_object_registry.json)  Config file containing the MCS Scene's specific custom Game Objects that may be loaded at runtime.
+- [`unity/Assets/Resources/MCS/primitive_object_registry.json`](./unity/Assets/Resources/MCS/primitive_object_registry.json)  Config file containing the MCS Scene's Unity Primitive Game Objects that may be loaded at runtime.
 - [`unity/Assets/Resources/MCS/Materials/`](./unity/Assets/Resources/MCS/Materials)  Copy of AI2-THOR's [`unity/Assets/QuickMaterials/`](./unity/Assets/QuickMaterials).  Must be in the `Resources` folder to access at runtime.
 - [`unity/Assets/Resources/MCS/Scenes/`](./unity/Assets/Resources/MCS/Scenes)  Folder containing sample scene config files (see [Run](#run)).
 
@@ -278,6 +270,8 @@ Take a GameObject (we'll call it the "Target" object) containing a MeshFilter, M
 - `ImageSynthesis/ImageSynthesis`:
   - Added a null check in `OnSceneChange`
   - Changed to always use the `Hidden/Depth` Shader
+  - Modified `Hidden/Depth` Shader to use turbo shading techniques
+  - Added editor controls to change depth power ratio and far clipping plane
   - Added property `guidForColors` and way to update it (`UpdateGuidForColors`). This is used to create random colors for object masks in `OnSceneChange`
 - `ImageSynthesis/Shaders/Depth`:
   - Changed the `frag` function to return pixels based on the camera's far clipping pane
