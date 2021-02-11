@@ -33,6 +33,7 @@ werkzeug.serving.WSGIRequestHandler.protocol_version = 'HTTP/1.1'
 
 MAX_DEPTH = 5000
 
+
 # get with timeout to allow quit
 def queue_get(que):
     res = None
@@ -44,12 +45,16 @@ def queue_get(que):
             pass
     return res
 
+
 class NumpyAwareEncoder(json.JSONEncoder):
 
     def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
         if isinstance(obj, np.generic):
             return np.asscalar(obj)
         return super(NumpyAwareEncoder, self).default(obj)
+
 
 class BufferedIO(object):
     def __init__(self, wfile):
@@ -70,6 +75,7 @@ class BufferedIO(object):
     def closed(self):
         return self.wfile.closed
 
+
 class ThorRequestHandler(werkzeug.serving.WSGIRequestHandler):
     def run_wsgi(self):
         old_wfile = self.wfile
@@ -77,6 +83,7 @@ class ThorRequestHandler(werkzeug.serving.WSGIRequestHandler):
         result = super(ThorRequestHandler, self).run_wsgi()
         self.wfile = old_wfile
         return result
+
 
 class MultiAgentEvent(object):
 
