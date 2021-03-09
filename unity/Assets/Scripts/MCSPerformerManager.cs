@@ -69,6 +69,9 @@ public class MCSPerformerManager : AgentManager {
     }
 
     public void SaveImages(ImageSynthesis imageSynthesis) {
+        if (!RenderInitialized)
+            return;
+
         if (this.renderImage) {
             byte[] image = this.captureScreen();
             this.imageList.Add(image);

@@ -349,6 +349,11 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     }
 
     public override void ProcessControlCommand(ServerAction controlCommand) {
+        if (controlCommand.action.Equals("Initialize"))
+        {
+            agentManager.initializeCommandReceived = true;
+        }
+
         if (this.cameraCullingMask < 0) {
             this.cameraCullingMask = this.GetComponentInChildren<Camera>().cullingMask;
         }
@@ -564,7 +569,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         // Wait for the end of frame after we run the physics simulation but before we save the images.
         yield return new WaitForEndOfFrame(); // Required for coroutine functions
 
-        ((MCSPerformerManager)this.agentManager).SaveImages(this.imageSynthesis);
+        if (agentManager.RenderInitialized)
+            ((MCSPerformerManager)this.agentManager).SaveImages(this.imageSynthesis);
 
         int nextLoop = thisLoop - 1;
 

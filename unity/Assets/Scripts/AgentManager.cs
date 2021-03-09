@@ -46,6 +46,9 @@ public class AgentManager : MonoBehaviour
     public int AdvancePhysicsStepCount = 0;
 	public bool consistentColors = false;
 
+	public bool initializeCommandReceived = false;
+	public bool RenderInitialized { get; protected set; }
+
 	void Awake() {
 
         tex = new Texture2D(UnityEngine.Screen.width, UnityEngine.Screen.height, TextureFormat.RGB24, false);
@@ -371,6 +374,25 @@ public class AgentManager : MonoBehaviour
 		}
 		tex.ReadPixels(readPixelsRect, 0, 0);
 		tex.Apply();
+
+		if (frameCounter == 1 || frameCounter == 2 || frameCounter == 61)
+		{
+			var pngBytes = tex.EncodeToPNG();
+			string fileName;
+
+			if (frameCounter == 1)
+				fileName = "/rgb_unity_initial.png";
+			else if (frameCounter == 2)
+				fileName = "/rgb_unity_after1action.png";
+			else
+				fileName = "/rgb_unity_final.png";
+
+			string dest = Application.dataPath.Substring(0, Application.dataPath.LastIndexOf('/'));
+			string path = dest + fileName;
+			System.IO.File.WriteAllBytes(path, pngBytes);
+			Debug.LogWarning(string.Format("TEST CaptureScreen Saved To: {0}", path));
+		}
+
 		return tex.GetRawTextureData ();
 	}
 
@@ -513,11 +535,15 @@ public class AgentManager : MonoBehaviour
     }
 
 	public virtual IEnumerator EmitFrame() {
+		if (initializeCommandReceived && !RenderInitialized)
+		{
+			RenderInitialized = true;
+		}
 
+		if (RenderInitialized)
+			frameCounter += 1;
 
-		frameCounter += 1;
-
-		bool shouldRender = this.renderImage && serverSideScreenshot;
+		bool shouldRender = this.renderImage && serverSideScreenshot && RenderInitialized;
 
 		if (shouldRender) {
 			// we should only read the screen buffer after rendering is complete
@@ -563,12 +589,13 @@ public class AgentManager : MonoBehaviour
             metadata.agentId = i;
             // we don't need to render the agent's camera for the first agent
             if (shouldRender) {
-                addImageForm (form, agent);
-                addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderDepthImage, "_depth", "image_depth");
-                addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderNormalsImage, "_normals", "image_normals");
-                addObjectImageForm (form, agent, ref metadata);
-                addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderClassImage, "_class", "image_classes");
-                addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderFlowImage, "_flow", "image_flow");
+				// We are rendering these images through MCSPerformerManager, these are creating out of sync versions
+                //addImageForm (form, agent);
+                //addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderDepthImage, "_depth", "image_depth");
+                //addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderNormalsImage, "_normals", "image_normals");
+                //addObjectImageForm (form, agent, ref metadata);
+                //addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderClassImage, "_class", "image_classes");
+                //addImageSynthesisImageForm(form, agent.imageSynthesis, this.renderFlowImage, "_flow", "image_flow");
 
                 metadata.thirdPartyCameras = cameraMetadata;
             }
