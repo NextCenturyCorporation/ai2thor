@@ -21,6 +21,7 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     public static int PHYSICS_SIMULATION_LOOPS = 1;
     public static int PHYSICS_SIMULATION_STEPS = 5;
 
+    public static float MOVEMENT_STEP_AMOUNT = 0.1f;
     public static int ROTATION_DEGREES = 10;
 
     //this is not the capsule radius, this is the radius of the x and z bounds of the agent.
@@ -526,31 +527,55 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     }
 
     private void SimulatePhysicsOnce() {
-        //for movement
-        if (this.inputWasMovement) {
-            MatchAgentHeightToStructureBelow(false);
-            this.movementActionFinished = moveInDirection((this.movementActionData.direction / this.substeps),
-                    this.movementActionData.UniqueID,
-                    this.movementActionData.maxDistanceToObject,
-                    this.movementActionData.forceAction);
-            this.actionFrameCount++;
-            if (this.actionFrameCount == this.substeps) {
-                actionFinished(this.movementActionFinished);
+        // Run physics over iterations to ensure proper collision between physics objects
+        // Otherwise, collisions will be ignored as the character will be "teleported"
+        var movementOrRotationThisFrame = this.inputWasMovement || this.inputWasRotateLook;
+        var iterations = 1;
+        if (this.inputWasMovement && this.movementActionData.direction.magnitude > MOVEMENT_STEP_AMOUNT)
+        {
+            iterations = Mathf.CeilToInt(this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
+        }
+
+        // Run iterations at the previous step speeds to ensure no change to how physics is simulated across
+        // older scenes
+        for (int j = 0; j < iterations; j++)
+        {
+            //for movement
+            if (this.inputWasMovement)
+            {
+                MatchAgentHeightToStructureBelow(false);
+                // Get the direction of the next step as MOVEMENT_STEP_AMOUNT
+                // This means steps smaller then 0.1f will be rounded to 0.1f;
+                var direction = this.movementActionData.direction / (this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
+                this.movementActionFinished = moveInDirection((direction / this.substeps),
+                        this.movementActionData.UniqueID,
+                        this.movementActionData.maxDistanceToObject,
+                        this.movementActionData.forceAction);
+                
+            } //for rotation
+            else if (this.inputWasRotateLook)
+            {
+                RotateLookAcrossFrames(this.lookRotationActionData);
+                RotateLookBodyAcrossFrames(this.bodyRotationActionData);
             }
-        } //for rotation
-        else if (this.inputWasRotateLook) {
-            RotateLookAcrossFrames(this.lookRotationActionData);
-            RotateLookBodyAcrossFrames(this.bodyRotationActionData);
-            this.actionFrameCount++;
-            if (this.actionFrameCount == this.substeps) {
-                actionFinished(true);
+            // Call Physics.Simulate multiple times with a small step value because a large step
+            // value causes collision errors.  From the Unity Physics.Simulate documentation:
+            // "Using step values greater than 0.03 is likely to produce inaccurate results."
+            for (int i = 0; i < MCSController.PHYSICS_SIMULATION_STEPS; ++i)
+            {
+                Physics.Simulate(0.01f);
             }
         }
-        // Call Physics.Simulate multiple times with a small step value because a large step
-        // value causes collision errors.  From the Unity Physics.Simulate documentation:
-        // "Using step values greater than 0.03 is likely to produce inaccurate results."
-        for (int i = 0; i < MCSController.PHYSICS_SIMULATION_STEPS; ++i) {
-            Physics.Simulate(0.01f);
+
+        // Since action finished needs to be called at the end of the possible iterations, make sure there was movement or rotation
+        // this frame before calling action finished at the end
+        if (movementOrRotationThisFrame)
+        {
+            this.actionFrameCount++;
+            if (this.actionFrameCount == this.substeps)
+            {
+                actionFinished(this.inputWasMovement ? this.movementActionFinished : true);
+            }
         }
     }
 
