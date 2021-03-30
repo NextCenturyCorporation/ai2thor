@@ -531,8 +531,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     private void SimulatePhysicsOnce() {
         // Run physics over iterations to ensure proper collision between physics objects
         // Otherwise, collisions will be ignored as the character will be "teleported"
-        var movementOrRotationThisFrame = this.inputWasMovement || this.inputWasRotateLook;
-        var physicsSteps = 1;
+        bool movementOrRotationThisFrame = this.inputWasMovement || this.inputWasRotateLook;
+        int physicsSteps = 1;
         if (this.inputWasMovement && this.movementActionData.direction.magnitude > MOVEMENT_STEP_AMOUNT)
         {
             physicsSteps = Mathf.CeilToInt(this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
@@ -540,8 +540,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         else if (this.inputWasRotateLook && (Mathf.Abs(this.lookRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT || Mathf.Abs(this.bodyRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT))
         {
             // Calculate the appropriate amount of physics steps when look and body rotation may be used (RotateLook command)
-            var lookRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.lookRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
-            var bodyRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.bodyRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
+            int lookRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.lookRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
+            int bodyRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.bodyRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
 
             // Use the max amount of physics steps required
             physicsSteps = lookRotationSteps >= bodyRotationSteps ? lookRotationSteps : bodyRotationSteps;
@@ -557,7 +557,7 @@ public class MCSController : PhysicsRemoteFPSAgentController {
                 MatchAgentHeightToStructureBelow(false);
                 // Get the direction of the next step as MOVEMENT_STEP_AMOUNT
                 // This means steps smaller then 0.1f will be rounded to 0.1f;
-                var direction = this.movementActionData.direction / (this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
+                Vector3 direction = this.movementActionData.direction / (this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
                 this.movementActionFinished = moveInDirection((direction / this.substeps),
                         this.movementActionData.UniqueID,
                         this.movementActionData.maxDistanceToObject,
@@ -928,7 +928,6 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     {
         Quaternion currentAngle = rotationActionData.startingRotation;
         Quaternion distance = Quaternion.Euler(0, rotationAmount, 0);
-        //Debug.LogWarning(rotationActionData.rotationChange);
 
         float rotationChange =
             distance.eulerAngles.y > 90 ? distance.eulerAngles.y - 360 :
@@ -942,8 +941,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     {
         if (rotationActionData.rotationChange == 0) return 0;
 
-        var direction = Mathf.Sign(rotationActionData.rotationChange);
-        var remainingRotation = Mathf.Abs(rotationActionData.rotationChange) - (step * 10);
+        float direction = Mathf.Sign(rotationActionData.rotationChange);
+        float remainingRotation = Mathf.Abs(rotationActionData.rotationChange) - (step * 10);
         return (remainingRotation > ROTATION_STEP_AMOUNT ? ROTATION_STEP_AMOUNT : remainingRotation) * direction;
     }
 }
