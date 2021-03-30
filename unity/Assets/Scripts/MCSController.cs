@@ -884,27 +884,27 @@ public class MCSController : PhysicsRemoteFPSAgentController {
 
     public override void RotateLeft(ServerAction controlCommand) {
         ServerAction rotate = new ServerAction();
-        rotate.rotation.y = -controlCommand.rotation.y;
+        rotate.rotation.y = controlCommand.rotation.y == 0 ? -ROTATION_STEP_AMOUNT : -controlCommand.rotation.y;
         RotateLook(rotate);
     }
 
     public override void RotateRight(ServerAction controlCommand) {
         ServerAction rotate = new ServerAction();
-        rotate.rotation.y = controlCommand.rotation.y;
+        rotate.rotation.y = controlCommand.rotation.y == 0 ? ROTATION_STEP_AMOUNT : controlCommand.rotation.y;
         RotateLook(rotate);
     }
 
     public override void LookUp(ServerAction controlCommand)
     {
         ServerAction rotate = new ServerAction();
-        rotate.horizon = -controlCommand.horizon;
+        rotate.horizon = controlCommand.horizon == 0 ? -ROTATION_STEP_AMOUNT : -controlCommand.horizon;
         RotateLook(rotate);
     }
 
     public override void LookDown(ServerAction controlCommand)
     {
         ServerAction rotate = new ServerAction();
-        rotate.horizon = controlCommand.horizon;
+        rotate.horizon = controlCommand.horizon == 0 ? ROTATION_STEP_AMOUNT : controlCommand.horizon;
         RotateLook(rotate);
     }
 
