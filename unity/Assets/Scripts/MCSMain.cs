@@ -720,7 +720,6 @@ public class MCSMain : MonoBehaviour {
         if (assignments.Count == 0 && singleConfigMaterial == null) {
             return;
         }
-        int numMats = GameObject.FindObjectsOfType<Material>().Length;
         // Sometimes objects have multiple renderers with their own materials (like flaps of boxes), so modify each.
         Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
         renderers.ToList().ForEach((renderer) => {
@@ -738,7 +737,6 @@ public class MCSMain : MonoBehaviour {
                 return singleConfigMaterial;
             }).ToArray();
         });
-        int numMats2 = GameObject.FindObjectsOfType<Material>().Length;
     }
 
     private GameObject AssignProperties(
@@ -931,7 +929,7 @@ public class MCSMain : MonoBehaviour {
             for(int i = 0; i < materialsEligibleForDeletion.Length; i++) {
                 Material possibleMatch = materialsEligibleForDeletion[i];
                 if (possibleMatch?.GetInstanceID() == m?.GetInstanceID()) {
-                    //Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
+                    Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
                     Material.Destroy(m);
                     break;
                 }
@@ -1535,6 +1533,8 @@ public class MCSMain : MonoBehaviour {
         });
 
         objectConfig.changeMaterials.Where(change => change.stepBegin == step).ToList().ForEach((change) => {
+            //When we change the material of an object, we should destroy the previous material.
+            DestroyAllContainedMaterials(gameOrParentObject);
             this.AssignMaterials(gameOrParentObject, change.materials.ToArray(), new string[] { }, new string[] { });
         });
 
