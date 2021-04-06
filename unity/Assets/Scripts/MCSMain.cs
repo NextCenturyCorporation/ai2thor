@@ -929,7 +929,7 @@ public class MCSMain : MonoBehaviour {
             for(int i = 0; i < materialsEligibleForDeletion.Length; i++) {
                 Material possibleMatch = materialsEligibleForDeletion[i];
                 if (possibleMatch?.GetInstanceID() == m?.GetInstanceID()) {
-                    Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
+                    //Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
                     Material.Destroy(m);
                     break;
                 }
