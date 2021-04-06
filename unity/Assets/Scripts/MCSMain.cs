@@ -218,9 +218,20 @@ public class MCSMain : MonoBehaviour {
         if (this.currentScene != null && this.currentScene.objects != null) {
             this.currentScene.objects.ForEach(objectConfig => {
                 GameObject gameOrParentObject = objectConfig.GetParentObject() ?? objectConfig.GetGameObject();
-                Destroy(gameOrParentObject);
+                if (gameOrParentObject!=null){
+                    DestroyAllContainedMaterials(gameOrParentObject);
+                    Debug.Log("object:"+gameOrParentObject);
+                    Destroy(gameOrParentObject);
+                }
             });
         }
+
+        //Material[] mats = GameObject.FindObjectsOfType<Material>();
+        //foreach (Material mat in mats){
+        //    Debug.Log(mat.name);
+        //    Material.Destroy(mat);
+        //}
+
 
         if (scene != null) {
             this.currentScene = scene;
@@ -675,6 +686,7 @@ public class MCSMain : MonoBehaviour {
     }
 
     private void AssignMaterial(GameObject gameObject, string configMaterialFile) {
+        DestroyAllContainedMaterials(gameObject);
         this.AssignMaterials(gameObject, new string[] { configMaterialFile }, new string[] { }, new string[] { });
     }
 
@@ -708,11 +720,11 @@ public class MCSMain : MonoBehaviour {
         if (assignments.Count == 0 && singleConfigMaterial == null) {
             return;
         }
-
+        int numMats = GameObject.FindObjectsOfType<Material>().Length;
         // Sometimes objects have multiple renderers with their own materials (like flaps of boxes), so modify each.
         Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>();
         renderers.ToList().ForEach((renderer) => {
-            renderer.materials = renderer.materials.ToList().Select((material) => {
+            renderer.sharedMaterials = renderer.sharedMaterials.ToList().Select((material) => {
                 if (assignments.Count > 0) {
                     if (assignments.ContainsKey(material.name)) {
                         return assignments[material.name];
@@ -726,6 +738,7 @@ public class MCSMain : MonoBehaviour {
                 return singleConfigMaterial;
             }).ToArray();
         });
+        int numMats2 = GameObject.FindObjectsOfType<Material>().Length;
     }
 
     private GameObject AssignProperties(
@@ -857,7 +870,9 @@ public class MCSMain : MonoBehaviour {
     ) {
         // If we've configured new trigger box definitions but trigger boxes already exist, delete them.
         if (gameObject.transform.Find("ReceptacleTriggerBox") != null) {
-            Destroy(gameObject.transform.Find("ReceptacleTriggerBox").gameObject);
+            GameObject temp = gameObject.transform.Find("ReceptacleTriggerBox").gameObject;
+            //DestroyAllContainedMaterials(temp);
+            Destroy(temp);
         }
 
         MCSConfigLegacyObjectDefinition legacy = this.RetrieveLegacyObjectDefinition(objectDefinition,
@@ -888,6 +903,40 @@ public class MCSMain : MonoBehaviour {
             }
             return receptacleObject;
         }).ToArray();
+    }
+
+    private static void DestroyAllContainedMaterials(GameObject obj) {
+        Material[] materialsEligibleForDeletion = GameObject.FindObjectsOfType<Material>();
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        DestroyMaterialsInAllRenderers(renderers, materialsEligibleForDeletion);
+        DestroyMaterialsInAllRenderers(obj.GetComponents<Renderer>(), materialsEligibleForDeletion);
+    }
+
+    private static void DestroyMaterialsInAllRenderers( Renderer[] renderers, Material[] materialsEligibleForDeletion) {
+        foreach (Renderer r in renderers) {
+            foreach (Material m in r.sharedMaterials) {
+                DestroyMaterial(m, materialsEligibleForDeletion);
+            }
+        }
+    }
+
+    private static void DestroyMaterial(Material m, Material[] materialsEligibleForDeletion) {
+        //Unity assigns the Material Asset to an object at first, but our code will later create an instance.
+        //These instances are not cleaned up so we need to detele them.  However, attempting to delete the Asset
+        //Will result in an error (although no negative consequences as far as I could see).  This function deletes
+        //the instances without attempting to delete material assets.
+        //Material assets cannot be destroyed and throw an error and are often flagged as NotEditable.
+        if (m.hideFlags == HideFlags.None) {
+            //The FindObjectsOfType call hides materials that cannot be deleted
+            for(int i = 0; i < materialsEligibleForDeletion.Length; i++) {
+                Material possibleMatch = materialsEligibleForDeletion[i];
+                if (possibleMatch?.GetInstanceID() == m?.GetInstanceID()) {
+                    //Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
+                    Material.Destroy(m);
+                    break;
+                }
+            }
+        }
     }
 
     private void AssignRigidbody(GameObject gameObject, float mass, bool kinematic, bool centerMassAtBottom) {
