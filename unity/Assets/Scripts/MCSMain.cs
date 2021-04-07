@@ -220,18 +220,10 @@ public class MCSMain : MonoBehaviour {
                 GameObject gameOrParentObject = objectConfig.GetParentObject() ?? objectConfig.GetGameObject();
                 if (gameOrParentObject!=null){
                     DestroyAllContainedMaterials(gameOrParentObject);
-                    Debug.Log("object:"+gameOrParentObject);
                     Destroy(gameOrParentObject);
                 }
             });
         }
-
-        //Material[] mats = GameObject.FindObjectsOfType<Material>();
-        //foreach (Material mat in mats){
-        //    Debug.Log(mat.name);
-        //    Material.Destroy(mat);
-        //}
-
 
         if (scene != null) {
             this.currentScene = scene;
@@ -737,7 +729,6 @@ public class MCSMain : MonoBehaviour {
                 return singleConfigMaterial;
             }).ToArray();
         });
-        int numMats2 = GameObject.FindObjectsOfType<Material>().Length;
     }
 
     private GameObject AssignProperties(
@@ -869,9 +860,7 @@ public class MCSMain : MonoBehaviour {
     ) {
         // If we've configured new trigger box definitions but trigger boxes already exist, delete them.
         if (gameObject.transform.Find("ReceptacleTriggerBox") != null) {
-            GameObject temp = gameObject.transform.Find("ReceptacleTriggerBox").gameObject;
-            //DestroyAllContainedMaterials(temp);
-            Destroy(temp);
+            Destroy(gameObject.transform.Find("ReceptacleTriggerBox").gameObject);
         }
 
         MCSConfigLegacyObjectDefinition legacy = this.RetrieveLegacyObjectDefinition(objectDefinition,
