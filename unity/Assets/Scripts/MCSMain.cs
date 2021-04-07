@@ -737,6 +737,7 @@ public class MCSMain : MonoBehaviour {
                 return singleConfigMaterial;
             }).ToArray();
         });
+        int numMats2 = GameObject.FindObjectsOfType<Material>().Length;
     }
 
     private GameObject AssignProperties(
