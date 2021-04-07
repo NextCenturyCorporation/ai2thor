@@ -218,7 +218,7 @@ public class MCSMain : MonoBehaviour {
         if (this.currentScene != null && this.currentScene.objects != null) {
             this.currentScene.objects.ForEach(objectConfig => {
                 GameObject gameOrParentObject = objectConfig.GetParentObject() ?? objectConfig.GetGameObject();
-                if (gameOrParentObject!=null){
+                if (gameOrParentObject != null) {
                     DestroyAllContainedMaterials(gameOrParentObject);
                     Destroy(gameOrParentObject);
                 }
@@ -900,7 +900,7 @@ public class MCSMain : MonoBehaviour {
         DestroyMaterialsInAllRenderers(obj.GetComponents<Renderer>(), materialsEligibleForDeletion);
     }
 
-    private static void DestroyMaterialsInAllRenderers( Renderer[] renderers, Material[] materialsEligibleForDeletion) {
+    private static void DestroyMaterialsInAllRenderers(Renderer[] renderers, Material[] materialsEligibleForDeletion) {
         foreach (Renderer r in renderers) {
             foreach (Material m in r.sharedMaterials) {
                 DestroyMaterial(m, materialsEligibleForDeletion);
@@ -916,7 +916,7 @@ public class MCSMain : MonoBehaviour {
         //Material assets cannot be destroyed and throw an error and are often flagged as NotEditable.
         if (m.hideFlags == HideFlags.None) {
             //The FindObjectsOfType call hides materials that cannot be deleted
-            for(int i = 0; i < materialsEligibleForDeletion.Length; i++) {
+            for (int i = 0; i < materialsEligibleForDeletion.Length; i++) {
                 Material possibleMatch = materialsEligibleForDeletion[i];
                 if (possibleMatch?.GetInstanceID() == m?.GetInstanceID()) {
                     //Debug.Log("attempting to destroy material=" + m.name + " hideflags=" + m.hideFlags);
