@@ -910,7 +910,7 @@ public class MCSMain : MonoBehaviour {
 
     private static void DestroyMaterial(Material m, Material[] materialsEligibleForDeletion) {
         //Unity assigns the Material Asset to an object at first, but our code will later create an instance.
-        //These instances are not cleaned up so we need to detele them.  However, attempting to delete the Asset
+        //These instances are not cleaned up so we need to delete them.  However, attempting to delete the Asset
         //Will result in an error (although no negative consequences as far as I could see).  This function deletes
         //the instances without attempting to delete material assets.
         //Material assets cannot be destroyed and throw an error and are often flagged as NotEditable.
