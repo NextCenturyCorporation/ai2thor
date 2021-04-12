@@ -28,6 +28,11 @@ namespace UnityStandardAssets.Characters.FirstPerson
         public float WalkMagnitude = 0.2f;
         public bool consistentColors = false;
         public string newSceneFile = "";
+        public bool teleportOnEndHabituation = false;
+        public float teleportXPosition;
+        public float teleportZPosition;
+        public bool rotateOnEndHabituation = false;
+        public float teleportYRotate;
 
         private Dictionary<string, string[]> positionByStep = new Dictionary<string, string[]>();
         private GameObject objectParent = null;
@@ -96,7 +101,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                     // bottom left.
                     Debug.Log("MCS: Screen Point Clicked: " + Input.mousePosition.ToString());
                     Debug.Log("MCS: Screen Point as Image Pixel Coords: " + screenPtToPixels.ToString());
-                    if (Input.GetKey(KeyCode.LeftShift)) {
+                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) {
                         receptacleObjectImageCoords.x = Input.mousePosition.x;
                         receptacleObjectImageCoords.y = Input.mousePosition.y;
                     } else {
@@ -297,6 +302,17 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
                     if (Input.GetKeyDown(KeyCode.H))
                     {
+                        if(teleportOnEndHabituation) {
+                            action.teleportPosition = new Vector3(
+                                teleportXPosition,
+                                MCSController.STANDING_POSITION_Y,
+                                teleportZPosition);
+                        }
+
+                        if (rotateOnEndHabituation) {
+                            action.teleportRotation = new Vector3(0, teleportYRotate, 0);
+                        }
+
                         action.action = "EndHabituation";
                         PhysicsController.ProcessControlCommand(action);
                     }
@@ -398,7 +414,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                         PhysicsController.ProcessControlCommand(action);
                     }
 
-                    if (Input.GetKeyDown(KeyCode.Slash))
+                    if (Input.GetKeyDown(KeyCode.Backslash))
                     {
                         foreach (Transform child in this.objectParent.transform)
                         {

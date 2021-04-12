@@ -1,4 +1,5 @@
 {
+    "name": "hinged_container_example_with_trophy",
     "version": 2,
     "ceilingMaterial": "AI2-THOR/Materials/Walls/Drywall",
     "floorMaterial": "AI2-THOR/Materials/Fabrics/CarpetWhite 3",
@@ -27,7 +28,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 180,
+                "y": 90,
                 "z": 0
             },
             "scale": {
@@ -50,7 +51,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 180,
+                "y": 90,
                 "z": 0
             },
             "scale": {
@@ -73,7 +74,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 180,
+                "y": 90,
                 "z": 0
             },
             "scale": {
@@ -96,7 +97,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 0,
+                "y": 270,
                 "z": 0
             },
             "scale": {
@@ -119,7 +120,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 0,
+                "y": 270,
                 "z": 0
             },
             "scale": {
@@ -142,7 +143,7 @@
             },
             "rotation": {
                 "x": 0,
-                "y": 0,
+                "y": 270,
                 "z": 0
             },
             "scale": {

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 public class MCSController : PhysicsRemoteFPSAgentController {
-    public static float STANDING_POSITION_Y = 0.4625f;
+    public static float STANDING_POSITION_Y = 0.762f;
     public static float CRAWLING_POSITION_Y = STANDING_POSITION_Y/2;
     public static float LYING_POSITION_Y = 0.1f;
 
@@ -139,8 +139,34 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         foreach (Transform child in GameObject.Find("Objects").transform) {
             child.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
         }
+
+        // We may need to add additional validation logic for teleport later.
+        MCSTeleportFull(action);
+
         this.lastActionStatus = Enum.GetName(typeof(ActionStatus), ActionStatus.SUCCESSFUL);
         this.actionFinished(false);
+    }
+
+    private void MCSTeleportFull(ServerAction action) {
+        if((!action.teleportPosition.HasValue) && (!action.teleportRotation.HasValue)) {
+            return;
+        }
+
+        if(action.teleportPosition.HasValue) {
+            // X/Z positions are passed in. Y position should always be standing height for now,
+            // but this logic may need to change later if there's potential for the y position
+            // to change (ramps, crawling, etc).
+            targetTeleport = new Vector3(action.teleportPosition.Value.x, STANDING_POSITION_Y, action.teleportPosition.Value.z);
+            transform.position = targetTeleport;
+        }
+
+        if(action.teleportRotation.HasValue) {
+            transform.rotation = Quaternion.Euler(new Vector3(0.0f, action.teleportRotation.Value.y, 0.0f));
+
+            // reset camera as well
+            m_Camera.transform.localEulerAngles = new Vector3(0.0f, 0.0f, 0.0f);
+
+        }
     }
 
     public override ObjectMetadata[] generateObjectMetadata() {
@@ -175,10 +201,11 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     public override MetadataWrapper generateMetadataWrapper() {
         MetadataWrapper metadata = base.generateMetadataWrapper();
         metadata.lastActionStatus = this.lastActionStatus;
-        metadata.reachDistance = this.maxVisibleDistance;
+        metadata.performerReach = this.maxVisibleDistance;
         metadata.clippingPlaneFar = this.m_Camera.farClipPlane;
         metadata.clippingPlaneNear = this.m_Camera.nearClipPlane;
         metadata.pose = this.pose.ToString();
+        metadata.performerRadius = this.GetComponent<CapsuleCollider>().radius;
         metadata.structuralObjects = metadata.objects.ToList().Where(objectMetadata => {
             GameObject gameObject = GameObject.Find(objectMetadata.name);
             // The object may be null if it is being held.
@@ -856,7 +883,7 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         this.serverActionMoveMagnitude = action.moveMagnitude;
     }
 
-    private float MatchAgentHeightToStructureBelow(bool poseChange) {
+    public float MatchAgentHeightToStructureBelow(bool poseChange) {
         float heightDifference;
         heightDifference = pose == PlayerPose.STANDING ? STANDING_POSITION_Y :
             pose == PlayerPose.CRAWLING ? CRAWLING_POSITION_Y : LYING_POSITION_Y;
@@ -868,18 +895,60 @@ public class MCSController : PhysicsRemoteFPSAgentController {
 
         //raycast to traverse structures at anything <= 45 degree angle incline
         if (Physics.Raycast(origin, Vector3.down, out hit, Mathf.Infinity, layerMask, QueryTriggerInteraction.Ignore) &&
-            (hit.transform.GetComponent<StructureObject>()!=null)) {
+            (hit.transform.GetComponent<StructureObject>() != null)) {
             //for pose changes on structures only
             if (poseChange)
                 return hit.point.y;
-            else
-            {
+            else {
+                float oldHeight = this.transform.position.y;
                 Vector3 newHeight = new Vector3(transform.position.x, (hit.point.y + heightDifference), transform.position.z);
                 this.transform.position = newHeight;
+                if (oldHeight != this.transform.position.y) {
+                    AdjustLocationAfterHeightAdjustment();
+                }
             }
         }
         //method needs a return value
         return 0;
+    }
+
+    private void AdjustLocationAfterHeightAdjustment() {
+        CapsuleCollider myCollider = GetComponent<CapsuleCollider>();
+        float radius;
+        Vector3 point1, point2;
+        //Determine if we are colliding (or within skin width) of another object
+        GetCapsuleInfoForAgent(myCollider, m_CharacterController.skinWidth, transform.position, out radius, out point1, out point2);
+        Collider[] overlapColliders = Physics.OverlapCapsule(point1, point2, radius, 1 << 8);
+
+        //we divide by scale here because we are going to expand the scaled collider by this value
+        float obstructionVsCollisionDifference = m_CharacterController.skinWidth / Mathf.Max(transform.localScale.x, transform.localScale.z);
+
+        //if we are colliding, we need to move a bit
+        if (overlapColliders.Length > 0) {
+            foreach (Collider c in overlapColliders) {
+                Vector3 direction;
+                float distance;
+                //Need to increase the collider radius temporarily to ensure we collide with something just outside but in our "skin"
+                myCollider.radius += obstructionVsCollisionDifference;
+                //This function determines the distance and direct we need to move to no longer be colliding.
+                bool overlap = Physics.ComputePenetration(myCollider, transform.position, transform.rotation, c, c.transform.position,
+                    c.transform.rotation, out direction, out distance);
+                myCollider.radius -= obstructionVsCollisionDifference;
+                Vector3 newPos = transform.position;
+                if (overlap) {
+                    Vector3 shift = direction * (distance);
+                    newPos += shift;
+                    transform.position = newPos;
+                }
+            }
+        }
+    }
+
+    protected override void SubPositionAdjustment() {
+        MCSMain main = GameObject.Find("MCS").GetComponent<MCSMain>();
+        if (!main.isPassiveScene) {
+            MatchAgentHeightToStructureBelow(false);
+        }
     }
 
     public override void RotateLeft(ServerAction controlCommand) {
