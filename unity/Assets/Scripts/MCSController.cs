@@ -562,7 +562,8 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         int physicsSteps = 1;
         if (this.inputWasMovement && this.movementActionData.direction.magnitude > MOVEMENT_STEP_AMOUNT)
         {
-            physicsSteps = Mathf.CeilToInt(this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
+            // Resolve floating point percision errors returning incorrect returns
+            physicsSteps = Mathf.CeilToInt((float)(Math.Round(this.movementActionData.direction.magnitude, 2)) / MOVEMENT_STEP_AMOUNT);
         }
         else if (this.inputWasRotateLook && (Mathf.Abs(this.lookRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT || Mathf.Abs(this.bodyRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT))
         {
