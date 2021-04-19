@@ -8,8 +8,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
 {
     public class DebugDiscreteAgentController : MonoBehaviour
     {   
-        public static float MOVE_MAX = 0.1f;
-
         public GameObject InputFieldObj = null;
         public PhysicsRemoteFPSAgentController PhysicsController = null;
         private InputField inputField;
@@ -25,7 +23,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         public float horizonIncrement = 30.0f;
         public float pushPullForce = 150.0f;
         public float FlyMagnitude = 1.0f;
-        public float WalkMagnitude = 0.2f;
+        public float WalkMagnitude = 0.1f;
         public bool consistentColors = false;
         public string newSceneFile = "";
         public bool teleportOnEndHabituation = false;
@@ -153,7 +151,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                             // else
                             // {
                                 action.action = "MoveAhead";
-                                action.moveMagnitude = Mathf.Min(WalkMagnitude, DebugDiscreteAgentController.MOVE_MAX);
+                                action.moveMagnitude = WalkMagnitude;
                                 PhysicsController.ProcessControlCommand(action);
                             // }
                         }
@@ -171,7 +169,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                             // else
                             // {
                                 action.action = "MoveBack";
-                                action.moveMagnitude = Mathf.Min(WalkMagnitude, DebugDiscreteAgentController.MOVE_MAX);
+                                action.moveMagnitude = WalkMagnitude;
                                 PhysicsController.ProcessControlCommand(action);
                             // }
                         }
@@ -189,7 +187,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                             // else
                             // {
                                 action.action = "MoveLeft";
-                                action.moveMagnitude = Mathf.Min(WalkMagnitude, DebugDiscreteAgentController.MOVE_MAX);
+                                action.moveMagnitude = WalkMagnitude;
                                 PhysicsController.ProcessControlCommand(action);
                             // }
                         }
@@ -207,7 +205,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                             // else
                             // {
                                 action.action = "MoveRight";
-                                action.moveMagnitude = Mathf.Min(WalkMagnitude, DebugDiscreteAgentController.MOVE_MAX);
+                                action.moveMagnitude = WalkMagnitude;
                                 PhysicsController.ProcessControlCommand(action);
                             // }
                         }
