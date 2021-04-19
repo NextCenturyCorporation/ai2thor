@@ -21,7 +21,10 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     public static int PHYSICS_SIMULATION_LOOPS = 1;
     public static int PHYSICS_SIMULATION_STEPS = 5;
 
-    public static int ROTATION_DEGREES = 10;
+    // Step amounts for rotation and movement which are considered 1 "time step"
+    // This is required to establish a rough idea of how much time should pass for each action
+    public static float MOVEMENT_STEP_AMOUNT = 0.1f;
+    public static int ROTATION_STEP_AMOUNT = 10;
 
     //this is not the capsule radius, this is the radius of the x and z bounds of the agent.
     public static float AGENT_RADIUS = 0.12f;
@@ -523,10 +526,10 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         }
 
         this.bodyRotationActionData = //left right
-            new MCSRotationData(transform.rotation, Quaternion.Euler(new Vector3(0.0f, response.rotation.y, 0.0f)));
+            new MCSRotationData(transform.rotation, response.rotation.y);
         this.lookRotationActionData = !reset ? //if not reseting then free look up down
-            new MCSRotationData(m_Camera.transform.rotation, Quaternion.Euler(new Vector3(response.horizon, 0.0f, 0.0f))) :
-            new MCSRotationData(m_Camera.transform.rotation, Quaternion.Euler(Vector3.zero));
+            new MCSRotationData(m_Camera.transform.rotation, response.horizon) :
+            new MCSRotationData(m_Camera.transform.rotation, 0);
 
         this.lastActionStatus = Enum.GetName(typeof(ActionStatus), reset ? ActionStatus.CANNOT_ROTATE : ActionStatus.SUCCESSFUL);
     }
@@ -553,31 +556,64 @@ public class MCSController : PhysicsRemoteFPSAgentController {
     }
 
     private void SimulatePhysicsOnce() {
-        //for movement
-        if (this.inputWasMovement) {
-            MatchAgentHeightToStructureBelow(false);
-            this.movementActionFinished = moveInDirection((this.movementActionData.direction / this.substeps),
-                    this.movementActionData.UniqueID,
-                    this.movementActionData.maxDistanceToObject,
-                    this.movementActionData.forceAction);
-            this.actionFrameCount++;
-            if (this.actionFrameCount == this.substeps) {
-                actionFinished(this.movementActionFinished);
+        // Run physics over iterations to ensure proper collision between physics objects
+        // Otherwise, collisions will be ignored as the character will be "teleported"
+        bool movementOrRotationThisFrame = this.inputWasMovement || this.inputWasRotateLook;
+        int physicsSteps = 1;
+        if (this.inputWasMovement && this.movementActionData.direction.magnitude > MOVEMENT_STEP_AMOUNT)
+        {
+            // Resolve floating point percision errors returning incorrect returns
+            physicsSteps = Mathf.CeilToInt((float)(Math.Round(this.movementActionData.direction.magnitude, 2)) / MOVEMENT_STEP_AMOUNT);
+        }
+        else if (this.inputWasRotateLook && (Mathf.Abs(this.lookRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT || Mathf.Abs(this.bodyRotationActionData.rotationChange) > ROTATION_STEP_AMOUNT))
+        {
+            // Calculate the appropriate amount of physics steps when look and body rotation may be used (RotateLook command)
+            int lookRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.lookRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
+            int bodyRotationSteps = Mathf.CeilToInt(Mathf.Abs(this.bodyRotationActionData.rotationChange) / ROTATION_STEP_AMOUNT);
+
+            // Use the max amount of physics steps required
+            physicsSteps = lookRotationSteps >= bodyRotationSteps ? lookRotationSteps : bodyRotationSteps;
+        }
+
+        // Run iterations at the previous step speeds to ensure no change to how physics is simulated across
+        // older scenes
+        for (int s = 0; s < physicsSteps; s++)
+        {
+            //for movement
+            if (this.inputWasMovement)
+            {
+                MatchAgentHeightToStructureBelow(false);
+                // Get the direction of the next step as MOVEMENT_STEP_AMOUNT
+                // This means steps smaller then 0.1f will be rounded to 0.1f;
+                Vector3 direction = this.movementActionData.direction / (this.movementActionData.direction.magnitude / MOVEMENT_STEP_AMOUNT);
+                this.movementActionFinished = moveInDirection((direction / this.substeps),
+                        this.movementActionData.UniqueID,
+                        this.movementActionData.maxDistanceToObject,
+                        this.movementActionData.forceAction);
+            } //for rotation
+            else if (this.inputWasRotateLook)
+            {
+                RotateLookAcrossFrames(this.lookRotationActionData, GetRotationStep(this.lookRotationActionData, s));
+                RotateLookBodyAcrossFrames(this.bodyRotationActionData, GetRotationStep(this.bodyRotationActionData, s));
             }
-        } //for rotation
-        else if (this.inputWasRotateLook) {
-            RotateLookAcrossFrames(this.lookRotationActionData);
-            RotateLookBodyAcrossFrames(this.bodyRotationActionData);
-            this.actionFrameCount++;
-            if (this.actionFrameCount == this.substeps) {
-                actionFinished(true);
+            // Call Physics.Simulate multiple times with a small step value because a large step
+            // value causes collision errors.  From the Unity Physics.Simulate documentation:
+            // "Using step values greater than 0.03 is likely to produce inaccurate results."
+            for (int i = 0; i < MCSController.PHYSICS_SIMULATION_STEPS; ++i)
+            {
+                Physics.Simulate(0.01f);
             }
         }
-        // Call Physics.Simulate multiple times with a small step value because a large step
-        // value causes collision errors.  From the Unity Physics.Simulate documentation:
-        // "Using step values greater than 0.03 is likely to produce inaccurate results."
-        for (int i = 0; i < MCSController.PHYSICS_SIMULATION_STEPS; ++i) {
-            Physics.Simulate(0.01f);
+
+        // Since action finished needs to be called at the end of the possible iterations, make sure there was movement or rotation
+        // this frame before calling action finished at the end
+        if (movementOrRotationThisFrame)
+        {
+            this.actionFrameCount++;
+            if (this.actionFrameCount == this.substeps)
+            {
+                actionFinished(this.inputWasMovement ? this.movementActionFinished : true);
+            }
         }
     }
 
@@ -918,34 +954,34 @@ public class MCSController : PhysicsRemoteFPSAgentController {
 
     public override void RotateLeft(ServerAction controlCommand) {
         ServerAction rotate = new ServerAction();
-        rotate.rotation.y = -ROTATION_DEGREES;
+        rotate.rotation.y = controlCommand.rotation.y == 0 ? -ROTATION_STEP_AMOUNT : -controlCommand.rotation.y;
         RotateLook(rotate);
     }
 
     public override void RotateRight(ServerAction controlCommand) {
         ServerAction rotate = new ServerAction();
-        rotate.rotation.y = ROTATION_DEGREES;
+        rotate.rotation.y = controlCommand.rotation.y == 0 ? ROTATION_STEP_AMOUNT : controlCommand.rotation.y;
         RotateLook(rotate);
     }
 
     public override void LookUp(ServerAction controlCommand)
     {
         ServerAction rotate = new ServerAction();
-        rotate.horizon = -ROTATION_DEGREES;
+        rotate.horizon = controlCommand.horizon == 0 ? -ROTATION_STEP_AMOUNT : -controlCommand.horizon;
         RotateLook(rotate);
     }
 
     public override void LookDown(ServerAction controlCommand)
     {
         ServerAction rotate = new ServerAction();
-        rotate.horizon = ROTATION_DEGREES;
+        rotate.horizon = controlCommand.horizon == 0 ? ROTATION_STEP_AMOUNT : controlCommand.horizon;
         RotateLook(rotate);
     }
 
-    public void RotateLookAcrossFrames(MCSRotationData rotationActionData)
+    public void RotateLookAcrossFrames(MCSRotationData rotationActionData, float rotationAmount)
     {
         Quaternion currentAngle = rotationActionData.startingRotation;
-        Quaternion distance = rotationActionData.endRotation;
+        Quaternion distance = Quaternion.Euler(rotationAmount, 0, 0);
 
         bool upReset = distance.eulerAngles.x + currentAngle.eulerAngles.x > maxHorizon;
         bool downReset = distance.eulerAngles.x + currentAngle.eulerAngles.x < minHorizon;
@@ -958,10 +994,10 @@ public class MCSController : PhysicsRemoteFPSAgentController {
         m_Camera.transform.rotation = Quaternion.Euler(m_Camera.transform.rotation.eulerAngles + updatedRotation);
     }
 
-    public void RotateLookBodyAcrossFrames(MCSRotationData rotationActionData)
+    public void RotateLookBodyAcrossFrames(MCSRotationData rotationActionData, float rotationAmount)
     {
         Quaternion currentAngle = rotationActionData.startingRotation;
-        Quaternion distance = rotationActionData.endRotation;
+        Quaternion distance = Quaternion.Euler(0, rotationAmount, 0);
 
         float rotationChange =
             distance.eulerAngles.y > 90 ? distance.eulerAngles.y - 360 :
@@ -969,6 +1005,15 @@ public class MCSController : PhysicsRemoteFPSAgentController {
 
         Vector3 updatedRotation = new Vector3(0, rotationChange / this.substeps, 0);
         transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + updatedRotation);
+    }
+
+    private float GetRotationStep(MCSRotationData rotationActionData, int step)
+    {
+        if (rotationActionData.rotationChange == 0) return 0;
+
+        float direction = Mathf.Sign(rotationActionData.rotationChange);
+        float remainingRotation = Mathf.Abs(rotationActionData.rotationChange) - (step * 10);
+        return (remainingRotation > ROTATION_STEP_AMOUNT ? ROTATION_STEP_AMOUNT : remainingRotation) * direction;
     }
 }
 
@@ -990,10 +1035,10 @@ public class MCSMovementActionData {
 /* class for contatining rotation data */
 public class MCSRotationData {
     public Quaternion startingRotation;
-    public Quaternion endRotation;
+    public float rotationChange;
 
-    public MCSRotationData(Quaternion startingRotation, Quaternion endRotation) {
+    public MCSRotationData(Quaternion startingRotation, float rotationChange) {
         this.startingRotation = startingRotation;
-        this.endRotation = endRotation;
+        this.rotationChange = rotationChange;
     }
 }
