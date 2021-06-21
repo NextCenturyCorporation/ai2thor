@@ -211,10 +211,13 @@ namespace UnityStandardAssets.Characters.FirstPerson
 		// Initialize parameters from environment variables
 		protected virtual void Awake()
 		{
+        
+        /*
             #if UNITY_WEBGL
                 this.jsInterface = this.GetComponent<JavaScriptInterface>();
                 this.jsInterface.enabled = true;
             #endif
+        */
 
             // character controller parameters
             m_CharacterController = GetComponent<CharacterController>();

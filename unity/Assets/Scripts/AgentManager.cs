@@ -802,7 +802,7 @@ public class AgentManager : MonoBehaviour
             #endif
 
 
-
+		
         #if !UNITY_WEBGL 
             if (serverType == serverTypes.WSGI) {
                 #if !UNITY_EDITOR
@@ -928,7 +928,7 @@ public class AgentManager : MonoBehaviour
             //}
 
             #endif
-
+			
 
 
 

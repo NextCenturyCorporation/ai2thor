@@ -62,11 +62,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
                 Debug.Log("Player Control Set To: Editor control");
                 setControlMode(ControlMode.DEBUG_TEXT_INPUT);
             #endif
+            /*
             #if UNITY_WEBGL
                 Debug.Log("Player Control Set To:Webgl");
                 setControlMode(ControlMode.FPS);
                 PhysicsController.GetComponent<JavaScriptInterface>().enabled = true;
-            #endif
+            #endif*/
             #if CROWDSOURCE_TASK
                 Debug.Log("CROWDSOURCE_TASK");
                 setControlMode(ControlMode.DISCRETE_HIDE_N_SEEK);
