@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.7170012, g: 0.7306422, b: 0.7505908, a: 1}
+  m_IndirectSpecularColor: {r: 0.7040911, g: 0.71842074, b: 0.7375759, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -2109,8 +2109,8 @@ MonoBehaviour:
   DroneBasket: {fileID: 1769782113}
   inHighFrictionArea: 0
   agentState: 3
-  agentManager: {fileID: 0}
-  m_Camera: {fileID: 0}
+  agentManager: {fileID: 14088544}
+  m_Camera: {fileID: 1752558000}
   cameraOrthSize: 0
   m_CharacterController: {fileID: 0}
   standingLocalCameraPosition: {x: 0, y: 0, z: 0}
@@ -2510,7 +2510,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 196425746, guid: 5b3a2f458d83e4af9a41ecf71b1f80f8, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -25.00003
+      value: -25.000122
       objectReference: {fileID: 0}
     - target: {fileID: 431395055, guid: 5b3a2f458d83e4af9a41ecf71b1f80f8, type: 3}
       propertyPath: m_AnchorMax.y
@@ -2535,6 +2535,10 @@ PrefabInstance:
     - target: {fileID: 1447693745859628, guid: 5b3a2f458d83e4af9a41ecf71b1f80f8, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1628998607465442, guid: 5b3a2f458d83e4af9a41ecf71b1f80f8, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1661791280900250, guid: 5b3a2f458d83e4af9a41ecf71b1f80f8, type: 3}
       propertyPath: m_IsActive
@@ -3761,6 +3765,11 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 114372750333748660, guid: 5e9e851c0e142814dac026a256ba2ac0,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 114749714472260818, guid: 5e9e851c0e142814dac026a256ba2ac0,
         type: 3}
       propertyPath: m_Enabled
@@ -3838,6 +3847,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3388362411129917294, guid: 5e9e851c0e142814dac026a256ba2ac0,
         type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3388362411129917294, guid: 5e9e851c0e142814dac026a256ba2ac0,
+        type: 3}
       propertyPath: WalkMagnitude
       value: 0.5
       objectReference: {fileID: 0}
@@ -3851,6 +3865,11 @@ PrefabInstance:
       propertyPath: horizonIncrement
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 3388362411129917294, guid: 5e9e851c0e142814dac026a256ba2ac0,
+        type: 3}
+      propertyPath: PhysicsController
+      value: 
+      objectReference: {fileID: 506323129}
     - target: {fileID: 3388362411129917294, guid: 5e9e851c0e142814dac026a256ba2ac0,
         type: 3}
       propertyPath: rotationIncrement
@@ -4018,6 +4037,12 @@ Rigidbody:
 --- !u!54 &1752557989 stripped
 Rigidbody:
   m_CorrespondingSourceObject: {fileID: 54477142686085990, guid: 5e9e851c0e142814dac026a256ba2ac0,
+    type: 3}
+  m_PrefabInstance: {fileID: 1752557968}
+  m_PrefabAsset: {fileID: 0}
+--- !u!20 &1752558000 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 2000000, guid: 5e9e851c0e142814dac026a256ba2ac0,
     type: 3}
   m_PrefabInstance: {fileID: 1752557968}
   m_PrefabAsset: {fileID: 0}
@@ -4268,7 +4293,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 940f8586c495e37cc80926a37e932c65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  defaultSceneFile: 
+  defaultSceneFile: playroom
   enableVerboseLog: 0
   enableDebugLogsInEditor: 1
   ai2thorObjectRegistryFile: ai2thor_object_registry

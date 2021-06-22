@@ -20,7 +20,7 @@ public class JavaScriptInterface : MonoBehaviour {
  */
     public void SendActionMetadata(string metadata)
     {
-        SendMetadata(metadata);
+        //SendMetadata(metadata);
     }
 
     void Start()

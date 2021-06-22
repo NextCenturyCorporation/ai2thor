@@ -102,10 +102,11 @@ public class AddressablesEditor
     [PostProcessBuild]
     public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
     {
+
 #if UNITY_STANDALONE_LINUX
-        string sourceDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), LINUX_CACHED_DIR);
-        string dataDir = Path.ChangeExtension(pathToBuiltProject, null) + "_Data/";
-        string targetDir = Path.Combine(dataDir, LINUX_STREAMING_DIR);
+        sourceDir = Path.Combine(Path.GetDirectoryName(Application.dataPath), LINUX_CACHED_DIR);
+        dataDir = Path.ChangeExtension(pathToBuiltProject, null) + "_Data/";
+        targetDir = Path.Combine(dataDir, LINUX_STREAMING_DIR);
 #endif
 
 #if UNITY_STANDALONE_OSX
@@ -113,11 +114,14 @@ public class AddressablesEditor
         string targetDir = Path.Combine(pathToBuiltProject, OSX_STREAMING_DIR);
 #endif    
 
+
+#if !UNITY_WEBGL
         // Do not copy default addressables if newly generated addressables were detected
         if (!Directory.Exists(targetDir))
         {
             CopyFilesRecursively(sourceDir, targetDir);
         }
+#endif
     }
 
     private static void CopyFilesRecursively(string sourceDir, string targetDir)
