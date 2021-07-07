@@ -23,25 +23,35 @@ public class AddressablesEditor
     /// <summary>
     /// Configures all assets within Addressables folder to addressables group
     /// </summary>
-    public static void RefreshAddressables()
-    {
+    public static void RefreshAddressables() {
+        AddressableAssetGroup group = AddressableAssetSettingsDefaultObject.Settings.DefaultGroup;
         string path = "Assets/Addressables";
         string[] guids = AssetDatabase.FindAssets("", new[] { path });
 
         List<AddressableAssetEntry> entriesAdded = new List<AddressableAssetEntry>();
         for (int i = 0; i < guids.Length; i++)
         {
-            entriesAdded.Add(AddToAddressablesDefaultGroup(guids[i]));
+            entriesAdded.Add(AddToAddressablesGroup(guids[i], group));
         }
 
         AddressableAssetSettingsDefaultObject.Settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, true);
     }
 
+    
+    [MenuItem("Tools/Addressables/Add Selected Folder to Group/Custom Objects")]
+    public static void SetAddressablesAtFolderOnDefaultGroup() {
+        SetAddressablesAtFolderOnGroup(AddressableAssetSettingsDefaultObject.Settings.FindGroup("Custom Objects"));
+    }
+    
+    [MenuItem("Tools/Addressables/Add Selected Folder to Group/Default")]
+    public static void SetAddressablesAtFolderOnCustomObjectsGroup() {
+        SetAddressablesAtFolderOnGroup(AddressableAssetSettingsDefaultObject.Settings.DefaultGroup);
+    }
+    
     /// <summary>
-    /// Adds all content within folder recursively to addressables
+    /// Adds all content within folder recursively to addressables group
     /// </summary>
-    [MenuItem("Tools/Addressables/Add To Addressables From Selected Folder")]
-    public static void SetAddressablesAtFolder()
+    public static void SetAddressablesAtFolderOnGroup(AddressableAssetGroup group)
     {
         string path = GetSelectedFolder();
 
@@ -56,22 +66,20 @@ public class AddressablesEditor
         var entriesAdded = new List<AddressableAssetEntry>();
         for (int i = 0; i < guids.Length; i++)
         {
-            entriesAdded.Add(AddToAddressablesDefaultGroup(guids[i]));
+            entriesAdded.Add(AddToAddressablesGroup(guids[i], group));
         }
 
         AddressableAssetSettingsDefaultObject.Settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, entriesAdded, true);
     }
 
-    private static AddressableAssetEntry AddToAddressablesDefaultGroup(string guid)
+    private static AddressableAssetEntry AddToAddressablesGroup(string guid, AddressableAssetGroup group)
     {
         AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
-        AddressableAssetGroup group = settings.DefaultGroup;
 
         AddressableAssetEntry entry = settings.CreateOrMoveEntry(guid, group, readOnly: false, postEvent: false);
         entry.address = AssetDatabase.GUIDToAssetPath(guid);
-        entry.labels.Add("MyLabel");
 
-        Debug.Log(AssetDatabase.GUIDToAssetPath(guid) + " was added to Addressables default group!");
+        Debug.Log(AssetDatabase.GUIDToAssetPath(guid) + " was added to Addressables " + group.Name + " group!");
 
         return entry;
     }
